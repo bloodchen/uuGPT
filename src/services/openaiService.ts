@@ -10,6 +10,7 @@ import { SSE } from 'sse.js'; // Assuming SSE library is used
 import { countTicks } from '../utils/generalUtils';
 import { saveAudioBlob, getAudioBlob } from '../idb';
 import { onSendVisionMessageComplete } from '../managers/imageManager';
+import { _ } from 'svelte-i18n'; // Import translation function
 
 let configuration: Configuration | null = null;
 let openai: OpenAIApi | null = null;

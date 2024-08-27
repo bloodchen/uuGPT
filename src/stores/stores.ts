@@ -1,8 +1,13 @@
 import { type Writable, writable } from "svelte/store";
-  import type { ChatCompletionRequestMessage } from "openai";
+import type { ChatCompletionRequestMessage } from "openai";
 
+//继承并增加isLiked和isDisliked两个属性
+interface CustomChatCompletionRequestMessage extends ChatCompletionRequestMessage{
+  'isLiked'?:boolean;
+  'isDisliked'?:boolean;
+}
 export interface Conversation {
-  history: ChatCompletionRequestMessage[];
+  history: CustomChatCompletionRequestMessage[];
   conversationTokens: number;
   assistantRole: string;
   title: string;
@@ -12,10 +17,14 @@ export interface DefaultAssistantRole {
   role: string;
   type: string;
 }
-
-export const settingsVisible = writable(false)
-export const helpVisible = writable(false)
-export const menuVisible = writable(false)
+const openai_key = import.meta.env.VITE_OPENAI_KEY;
+console.log(openai_key);
+localStorage.setItem('api_key',`"${openai_key}"`)
+// 面板可见性
+export const settingsVisible = writable(false);
+export const helpVisible = writable(false);
+export const menuVisible = writable(false);
+export const sidebarVisible = writable(false); //ADD: sidebar可见性 
 
 let storedApiKey = localStorage.getItem("api_key")
 let parsedApiKey = storedApiKey !== null ? JSON.parse(storedApiKey) : null;
@@ -31,7 +40,8 @@ combinedTokens.subscribe((value) => localStorage.setItem("combined_tokens", JSON
 let storedDefaultAssistantRole = localStorage.getItem('default_assistant_role');
 let parsedDefaultAssistantRole: DefaultAssistantRole = storedDefaultAssistantRole !== null ? JSON.parse(storedDefaultAssistantRole) : 0;
 export const defaultAssistantRole = writable(parsedDefaultAssistantRole || {
-    role: "You are a helpful assistant.",
+    role: "你的所有回答都使用markdown格式",
+    //role: "You are an AI Search Assistant designed to provide precise, accurate, and well-organized search results to users. Your primary objective is to understand the user's query, search for the most relevant information, and present it in a clear, concise, and organized manner using Markdown formatting. Your responses should be detailed, with important points emphasized, and well-structured.",
     type: "system",
   });
 defaultAssistantRole.subscribe((value) => localStorage.setItem("default_assistant_role", JSON.stringify(value)));
@@ -40,11 +50,13 @@ export const chosenConversationId = writable(0);
 
 let storedConversations = localStorage.getItem('conversations');
 let parsedConversations: Conversation[] = storedConversations !== null ? JSON.parse(storedConversations) : null;
-
+console.log(storedConversations);
 export const conversations: Writable<Conversation[]> = writable(parsedConversations || [{
     history: [],
     conversationTokens: 0,
-    assistantRole: "You are a helpful assistant.",
+    assistantRole: `
+    You are an AI Search Assistant designed to provide precise, accurate, and well-organized search results to users. Your primary objective is to understand the user's query, search for the most relevant information, and present it in a clear, concise, and organized manner using Markdown formatting. Your responses should be detailed, with important points emphasized, and well-structured.
+    `,
     title: "",
   }]);
 
@@ -53,7 +65,7 @@ conversations.subscribe((value) => {
 });
 
 
-export const selectedModel = writable(localStorage.getItem('selectedModel') || 'gpt-3.5-turbo');
+export const selectedModel = writable(localStorage.getItem('selectedModel') || 'gpt-4o-mini');
 export const selectedVoice = writable(localStorage.getItem('selectedVoice') || 'alloy');
 export const selectedMode = writable(localStorage.getItem('selectedMode') || 'GPT');
 

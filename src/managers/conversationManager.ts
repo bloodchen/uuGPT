@@ -13,15 +13,15 @@ let streamText = "";
 
 export function setHistory(msg, convId = get(chosenConversationId)): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-      try {
-          let conv = get(conversations);
-          conv[convId].history = msg;
-          conversations.set(conv);
-          resolve(); // No value is being resolved here
-      } catch (error) {
-          console.error("Failed to update history", error);
-          reject(error); // Propagate the error
-      }
+    try {
+      let conv = get(conversations);
+      conv[convId].history = msg;
+      conversations.set(conv);
+      resolve(); // No value is being resolved here
+    } catch (error) {
+      console.error("Failed to update history", error);
+      reject(error); // Propagate the error
+    }
   });
 }
 
@@ -29,105 +29,108 @@ export function setHistory(msg, convId = get(chosenConversationId)): Promise<voi
 
 
 export function deleteMessageFromConversation(messageIndex: number) {
-    const currentConversationId = get(chosenConversationId);
-    const currentConversations = get(conversations);
-    const updatedHistory = currentConversations[currentConversationId].history.filter((_, index) => index !== messageIndex);
+  const currentConversationId = get(chosenConversationId);
+  const currentConversations = get(conversations);
+  const updatedHistory = currentConversations[currentConversationId].history.filter((_, index) => index !== messageIndex);
 
-    currentConversations[currentConversationId].history = updatedHistory;
-    conversations.set(currentConversations);
+  currentConversations[currentConversationId].history = updatedHistory;
+  conversations.set(currentConversations);
 }
 
 
 
-
+// let cr = get(defaultAssistantRole);
+// //cr.role="You are an AI Search Assistant designed to provide precise, accurate, and well-organized search results to users. Your primary objective is to understand the user's query, search for the most relevant information, and present it in a clear, concise, and organized manner using Markdown formatting. Your responses should be detailed, with important points emphasized, and well-structured.";
+// cr.role="你的所有回答都使用markdown格式";
+// defaultAssistantRole.set(cr);
 export function newChat() {
-    const currentConversations = get(conversations);
-    // Check if conversations is not empty before accessing its last element
-    if (currentConversations.length > 0 && currentConversations[currentConversations.length - 1].history.length === 0) {
-      console.log("Jumping to recent conversation.");
-        chosenConversationId.set(currentConversations.length - 1);
-        return;
-    }
-    const newConversation: Conversation = {
-        history: [],
-        conversationTokens: 0,
-        assistantRole: get(defaultAssistantRole).role, // Assuming defaultAssistantRole is a svelte store
-        title: "",
-    };
-    conversations.update(conv => [...conv, newConversation]);
-    chosenConversationId.set(get(conversations).length - 1);
+  const currentConversations = get(conversations);
+  // Check if conversations is not empty before accessing its last element
+  if (currentConversations.length > 0 && currentConversations[currentConversations.length - 1].history.length === 0) {
+    console.log("Jumping to recent conversation.");
+    chosenConversationId.set(currentConversations.length - 1);
+    return;
+  }
+  const newConversation: Conversation = {
+    history: [],
+    conversationTokens: 0,
+    assistantRole: get(defaultAssistantRole).role, // Assuming defaultAssistantRole is a svelte store
+    title: "",
+  };
+  conversations.update(conv => [...conv, newConversation]);
+  chosenConversationId.set(get(conversations).length - 1);
 }
 
 
 export function cleanseMessage(msg: ChatCompletionRequestMessage | { role: string; content: any }): ChatCompletionRequestMessage {
-    // Only allowing 'role' and 'content' fields, adapt this part as necessary
-    const allowedProps = ['role', 'content'];
-    let cleansed = Object.keys(msg)
-        .filter(key => allowedProps.includes(key))
-        .reduce((obj, key) => {
-            obj[key] = msg[key];
-            return obj;
-        }, {} as any);
+  // Only allowing 'role' and 'content' fields, adapt this part as necessary
+  const allowedProps = ['role', 'content'];
+  let cleansed = Object.keys(msg)
+    .filter(key => allowedProps.includes(key))
+    .reduce((obj, key) => {
+      obj[key] = msg[key];
+      return obj;
+    }, {} as any);
 
-    // If 'content' is an array (for structured messages like images), keep it as is
-    // Otherwise, ensure 'content' is a string
-    if (!Array.isArray(cleansed.content)) {
-        cleansed.content = cleansed.content.toString();
-    }
+  // If 'content' is an array (for structured messages like images), keep it as is
+  // Otherwise, ensure 'content' is a string
+  if (!Array.isArray(cleansed.content)) {
+    cleansed.content = cleansed.content.toString();
+  }
 
-    return cleansed as ChatCompletionRequestMessage;
+  return cleansed as ChatCompletionRequestMessage;
 }
 
 
 
 export async function routeMessage(input: string, convId, pdfOutput) {
 
-    let currentHistory = get(conversations)[convId].history;
-    let messageHistory = currentHistory;
-    currentHistory = [...currentHistory, { role: "user", content: input }];
-    setHistory(currentHistory);
-    let pdftext = pdfOutput;
+  let currentHistory = get(conversations)[convId].history;
+  let messageHistory = currentHistory;
+  currentHistory = [...currentHistory, { role: "user", content: input }];
+  setHistory(currentHistory);
+  let pdftext = pdfOutput;
 
-    const defaultModel = 'gpt-3.5-turbo'; 
-    const defaultVoice = 'alloy'; 
-    const model = get(selectedModel) || defaultModel;
-    const voice = get(selectedVoice) || defaultVoice;
+  const defaultModel = 'gpt-3.5-turbo';
+  const defaultVoice = 'alloy';
+  const model = get(selectedModel) || defaultModel;
+  const voice = get(selectedVoice) || defaultVoice;
 
-    let outgoingMessage: ChatCompletionRequestMessage[];
-    outgoingMessage = [
-        ...messageHistory,
-        { role: "user", content: input },
-      ];
+  let outgoingMessage: ChatCompletionRequestMessage[];
+  outgoingMessage = [
+    ...messageHistory,
+    { role: "user", content: input },
+  ];
 
-    if (model.includes('tts')) {
-        // The model string contains 'tts', proceed with TTS message handling
-        await sendTTSMessage(input, model, voice, convId);
-      } else if (model.includes('vision')) {
-        const imagesBase64 = get(base64Images); // Retrieve the current array of base64 encoded images
-        await sendVisionMessage(outgoingMessage, imagesBase64, convId);
-      } else if (model.includes('dall-e')) {
-        await sendDalleMessage(outgoingMessage, convId);
-      } else if (pdfOutput) {
-        await sendPDFMessage(outgoingMessage, convId, pdfOutput);
-    } else {
-        // Default case for regular messages if no specific keywords are found in the model string
-        await sendRegularMessage(outgoingMessage, convId);
-    }
-    if (get(conversations)[convId].history.length === 1 || get(conversations)[convId].title === '') {
-        await createTitle(input);
-    }
+  if (model.includes('tts')) {
+    // The model string contains 'tts', proceed with TTS message handling
+    await sendTTSMessage(input, model, voice, convId);
+  } else if (model.includes('vision')) {
+    const imagesBase64 = get(base64Images); // Retrieve the current array of base64 encoded images
+    await sendVisionMessage(outgoingMessage, imagesBase64, convId);
+  } else if (model.includes('dall-e')) {
+    await sendDalleMessage(outgoingMessage, convId);
+  } else if (pdfOutput) {
+    await sendPDFMessage(outgoingMessage, convId, pdfOutput);
+  } else {
+    // Default case for regular messages if no specific keywords are found in the model string
+    await sendRegularMessage(outgoingMessage, convId);
+  }
+  if (get(conversations)[convId].history.length === 1 || get(conversations)[convId].title === '') {
+    await createTitle(input);
+  }
 }
 
 function setTitle(title: string) {
-    let conv = get(conversations);
-    conv[get(chosenConversationId)].title = title;
-    conversations.set(conv);
-  }
+  let conv = get(conversations);
+  conv[get(chosenConversationId)].title = title;
+  conversations.set(conv);
+}
 
 async function createTitle(currentInput: string) {
-    const titleModel = 'gpt-4-turbo-preview';
+  const titleModel = 'gpt-4-turbo-preview';
 
-    let response = await sendRequest([
+  let response = await sendRequest([
     { role: "user", content: currentInput },
     {
       role: "user",
@@ -142,36 +145,36 @@ async function createTitle(currentInput: string) {
 }
 
 export function displayAudioMessage(audioUrl) {
-    const audioMessage = {
-  role: "assistant",
-  content: "Audio file generated.",
-  audioUrl: audioUrl,
-  isAudio: true 
-} as ChatCompletionRequestMessage;
+  const audioMessage = {
+    role: "assistant",
+    content: "Audio file generated.",
+    audioUrl: audioUrl,
+    isAudio: true
+  } as ChatCompletionRequestMessage;
 
-setHistory([...get(conversations)[get(chosenConversationId)].history, audioMessage]);
+  setHistory([...get(conversations)[get(chosenConversationId)].history, audioMessage]);
 }
 
 export function countTokens(usage) {
-    let conv = get(conversations);
-    conv[get(chosenConversationId)].conversationTokens =
-      conv[get(chosenConversationId)].conversationTokens + usage.total_tokens;
-    conversations.set(conv);
-    combinedTokens.set(get(combinedTokens) + usage.total_tokens);
-    console.log("Counted tokens: " + usage.total_tokens);
-  }
+  let conv = get(conversations);
+  conv[get(chosenConversationId)].conversationTokens =
+    conv[get(chosenConversationId)].conversationTokens + usage.total_tokens;
+  conversations.set(conv);
+  combinedTokens.set(get(combinedTokens) + usage.total_tokens);
+  console.log("Counted tokens: " + usage.total_tokens);
+}
 
- 
-  export function estimateTokens(msg: ChatCompletionRequestMessage[], convId) {
-    let chars = 0;
-    msg.map((m) => {
-      chars += m.content.length;
-    });
-    chars += streamText.length;
-    let tokens = chars / 4;
-    let conv = get(conversations);
-    conv[convId].conversationTokens =
-      conv[convId].conversationTokens + tokens;
-    conversations.set(conv);
-    combinedTokens.set(get(combinedTokens) + tokens);
-  }
+
+export function estimateTokens(msg: ChatCompletionRequestMessage[], convId) {
+  let chars = 0;
+  msg.map((m) => {
+    chars += m.content.length;
+  });
+  chars += streamText.length;
+  let tokens = chars / 4;
+  let conv = get(conversations);
+  conv[convId].conversationTokens =
+    conv[convId].conversationTokens + tokens;
+  conversations.set(conv);
+  combinedTokens.set(get(combinedTokens) + tokens);
+}

@@ -7,10 +7,6 @@
 }
 
 body {
-    background-color: #21252b;
+    background-color: whitesmoke;
 }
 
-
-  .icon-white {
-    filter: invert(75%);
-  }
