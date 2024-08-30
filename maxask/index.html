@@ -213,10 +213,10 @@
         showHeader = false;
         console.log(ai_q,old_ai_q);
         if(ai_q!=old_ai_q){
-          document.getElementById('ai_iframe').src=`http://localhost:5173/?aisearch_q=${ai_q}`;
+          document.getElementById('ai_iframe').src=`https://www.uugpt.com/?aisearch_q=${ai_q}`;
           old_ai_q = ai_q;
         }else{
-          document.getElementById('ai_iframe').src=`http://localhost:5173/`;
+          document.getElementById('ai_iframe').src=`https://www.uugpt.com/`;
         }
 
       } else {
