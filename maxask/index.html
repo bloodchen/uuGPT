@@ -137,14 +137,11 @@
             <div class="loading-wrapper" id="ai_loading">
                 <div class="loading"></div>
             </div>
-            <iframe id="ai_iframe" class="aiframe" style="border: 0;" allow="clipboard-write"
-                >
+            <iframe id="ai_iframe" class="aiframe" style="border: 0;" allow="clipboard-write">
             </iframe>
         </div>
     </div>
     <script>
-
-
         window.__gcse || (window.__gcse = {});
         window.__gcse.searchCallbacks = {
             image: {
@@ -159,7 +156,6 @@
         function makenicer() {
             const elm = document.querySelector(".gsc-tabsArea");
             if (elm) {
-                // console.log("found elm:", elm);
                 var url = new URL(document.location.href);
                 var q = url.hash.split("gsc.q");
                 if (q[1]) {
@@ -172,11 +168,10 @@
             }
         }
         function myResultsReadyCallback(name, q, promos, results, resultsDiv) {
-            console.log(name, q, promos, results, resultsDiv)
             document.getElementById('gs_loading').style.display = 'none';
         }
-        document.getElementById('ai_iframe').onload =  function() {
-            // console.log('-------------',ai_q,tabid);
+        document.getElementById('ai_iframe').onload = function () {
+            console.log('ai_page loaded');
             document.getElementById('ai_loading').style.display = 'none';
         }
     </script>
@@ -221,6 +216,7 @@
             newHash = newHash.slice(0, -1); // 删除最后一个字符
             window.location.hash = `#${newHash}`; // 更新 URL 的哈希部分
         }
+        //改变tab按钮的选中和非选中样式，
         function showTab(showtabid) {
             if (!showtabid) { showtabid = 0 }
             document.getElementById('result_tab_0').classList.add('tabitem-inactive');
@@ -234,7 +230,9 @@
             tabid = showtabid;
             setHashParamValue('gsc.tab', tabid);
         }
-        function showGoogleResult() {
+        //显示google搜索结果页，隐藏ai页
+        function showGoogleResult(tid) {
+            showTab(tid);
             let ch = document.getElementById('cse_header');
             ch.classList.remove('cse-header-hide');
             ch.classList.add('cse-header-show');
@@ -243,8 +241,9 @@
             document.getElementById('show_header').classList.add('hide');
             showHeader = true;
         }
-
-        function showAISearch() {
+        //显示ai页，隐藏google搜索结果页
+        function showAISearch(ai_q) {
+            showTab(2);
             let ch = document.getElementById('cse_header');
             document.getElementById('googlesearh').classList.add('hide');
             document.getElementById('aiarea').classList.remove('hide');
@@ -252,32 +251,46 @@
             ch.classList.remove('cse-header-show');
             document.getElementById('show_header').classList.remove('hide');
             //移动端部分浏览器工具栏会遮挡页面导致元素显示不正确，所以要重新确定位置；
-            let viewHight = document.documentElement.clientHeight;
-            document.getElementById('aiwrapper').style.height = (viewHight-75)+'px';
             showHeader = false;
+            handleResize();
+            if (aiiframe.src == '') {
+                if (ai_q == null || ai_q == '') {
+                    aiiframe.src = `https://www.uugpt.com/framed/`;
+                } else {
+                    aiiframe.src = `https://www.uugpt.com/framed/?aisearch_q=${ai_q}`;
+                    old_ai_q = ai_q;
+                }
+
+            } else {
+                if (ai_q != old_ai_q && ai_q !=null && ai_q !="") {
+                    aiiframe.contentWindow.postMessage(ai_q, '*');
+                    old_ai_q = ai_q;
+                }
+            }
+
         }
+        //根据条件判断返回google结果页
         function back2Search() {
             if (tabid != 2) return;
-            showTab(0);
-            showGoogleResult();
+            showGoogleResult(0);
+        }
+        //根据屏幕高度改变ai输入框位置，让输入框处于屏幕最下方
+        function handleResize(){
+            let viewHight = document.documentElement.clientHeight;
+            document.getElementById('aiwrapper').style.height = (viewHight - (showHeader?165:75)) + 'px';
         }
     </script>
     <script>
+        const aiiframe = document.getElementById('ai_iframe');
+        var tabid = getHashParamValue('gsc.tab');
+        var ai_q = getHashParamValue('gsc.q');
+        var channel_q = new URLSearchParams(window.location.search).get('q');
+        var isShowedHint = getCookie('isShowedHint');
+        var showHeader = false;//是否显示header
+        var old_ai_q = '';
 
-        const sh = document.getElementById('show_header');
-        let webtab = document.getElementById('result_tab_0');
-        let imgtab = document.getElementById('result_tab_1');
-        let aitab = document.getElementById('result_tab_2');
-        let aiiframe = document.getElementById('ai_iframe');
-
-        let tabid = getHashParamValue('gsc.tab');
-        let ai_q = getHashParamValue('gsc.q');
-        let channel_q = new URLSearchParams(window.location.search).get('q');
-        let isShowedHint = getCookie('isShowedHint');
-        let showHeader = false;//是否显示header
-        let old_ai_q = '';
         //按cookie决定是否显示“带？进ai”的提示
-        if(!isShowedHint){
+        if (!isShowedHint) {
             document.getElementById('hint').classList.remove('hide');
             document.getElementById('hint').classList.add('show');
         }
@@ -289,74 +302,57 @@
         //如果query中带问号，直接显示AI页
         if (ai_q && (ai_q.endsWith('?') || ai_q.endsWith('？'))) {
             tabid = 2;
-            setHashParamValue('gsc.tab', 2);
-        } 
-        //根据之前决定的tabid，显示对应页面
-        if(tabid==2 && ai_q){
-            aiiframe.src = `https://www.uugpt.com/framed/?aisearch_q=${ai_q}`;
-            //aiiframe.src = `http://localhost:5173/framed/?aisearch_q=${ai_q}`;
-            showAISearch();
-        } else{
-            aiiframe.src="https://www.uugpt.com/framed/";
-            //aiiframe.src="http://localhost:5173/framed/";
-            showGoogleResult();
         }
-        //tab按钮的样式
-        showTab(tabid);
+        //根据之前决定的tabid，显示对应页面
+        if (tabid == 2) {
+            showAISearch(ai_q);
+        }else{
+            showGoogleResult(tabid);
+        }
+        //初始化AI页高度
+        handleResize();
+        //监听浏览器窗口尺寸变化
+        window.addEventListener('resize', handleResize);
 
-        webtab.addEventListener('click', function () {
-            showTab(0);
-            showGoogleResult();
-            setHashParamValue('gsc.tab', 0);
+        document.getElementById('result_tab_0').addEventListener('click', function () {
+            showGoogleResult(0);
         });
 
-        imgtab.addEventListener('click', function () {
-            showTab(1);
-            showGoogleResult();
-            setHashParamValue('gsc.tab', 1);
+        document.getElementById('result_tab_1').addEventListener('click', function () {
+            showGoogleResult(1);
         });
 
-        aitab.addEventListener('click', function () {
-            showTab(2);
-            showAISearch();
-            setHashParamValue('gsc.tab', 2);
-            if (aiiframe == null) { aiiframe = document.getElementById('ai_iframe'); }
-            let ai_q = getHashParamValue('gsc.q');
-            if(ai_q==null) return;
-            if (ai_q != old_ai_q) {
-                aiiframe.contentWindow.postMessage(ai_q, '*');
-                old_ai_q = ai_q;
-            }
+        document.getElementById('result_tab_2').addEventListener('click', function () {
+            ai_q = getHashParamValue('gsc.q');
+            showAISearch(ai_q);
         });
 
-        sh.addEventListener('click', function (event) {
-            // alert(document.documentElement.clientHeight+':'+ document.getElementById('testid').scrollHeight);
-            let viewHight = document.documentElement.clientHeight;
+        document.getElementById('show_header').addEventListener('click', function (event) {
             let ch = document.getElementById('cse_header');
             let showHeaderElement = document.getElementById('show_header');
             if (!showHeader) {
                 ch.classList.remove('cse-header-hide');
                 ch.classList.add('cse-header-show');
                 showHeader = true;
-                document.getElementById('aiwrapper').style.height = (viewHight-163)+'px';
+                handleResize();
                 showHeaderElement.classList.add('rotate-180');
             } else {
                 ch.classList.add('cse-header-hide');
                 ch.classList.remove('cse-header-show');
                 showHeader = false;
-                document.getElementById('aiwrapper').style.height = (viewHight-75)+'px';
+                handleResize();
                 showHeaderElement.classList.remove('rotate-180');
             }
         })
 
-        document.getElementById('hintClose').addEventListener('click',function(event){
+        document.getElementById('hintClose').addEventListener('click', function (event) {
             document.getElementById('hint').classList.remove('show');
             document.getElementById('hint').classList.add('hide');
-            setCookie('isShowedHint',true);
+            setCookie('isShowedHint', true);
         })
 
         window.onload = () => {
-            //因为修改的是google加载的组件，所以必须在window.onload里，不然找不到id
+            //因为修改的是google加载的组件，所以必须在window.onload里做google组件的监听，不然找不到id
             document.getElementsByClassName('gsc-search-button gsc-search-button-v2')[0].addEventListener('click', back2Search);
             let gs_input = document.getElementById('gsc-i-id1');
             gs_input.addEventListener('keydown', function (event) {
@@ -364,27 +360,19 @@
                 if (event.key === 'Enter' || event.keyCode === 13) {
                     ai_q = gs_input.value;
                     setHashParamValue('gsc.q', ai_q);
-                    if (ai_q && (ai_q.endsWith('?') || ai_q.endsWith('？'))) { 
-                        showTab(2);
-                        showAISearch();
-                        aiiframe.contentWindow.postMessage(ai_q, '*');
-                    }else{
-                         back2Search();
+                    if (ai_q && (ai_q.endsWith('?') || ai_q.endsWith('？'))) {
+                        showAISearch(ai_q);
+                    } else {
+                        back2Search();
                     }
                 }
             });
             gs_input.addEventListener('input', function (event) {
                 ai_q = event.target.value;
             });
-            
-            document.getElementById('gs_loading').style.display = 'none';
 
-       
-       
+            document.getElementById('gs_loading').style.display = 'none';
         }
-        
-        let viewHight = document.documentElement.clientHeight;
-        document.getElementById('aiwrapper').style.height = (viewHight-75)+'px';
 
     </script>
     <link rel="stylesheet" href="pretty.css">
