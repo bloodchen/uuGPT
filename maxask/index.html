@@ -208,13 +208,14 @@
             } else {
                 params.append(paramName, paramValue); // 添加新的参数
             }
-            // 构造新的哈希字符串
-            let newHash = '';
-            for (const [key, value] of params.entries()) {
-                newHash += `${key}=${value}&`
-            }
-            newHash = newHash.slice(0, -1); // 删除最后一个字符
-            window.location.hash = `#${newHash}`; // 更新 URL 的哈希部分
+            console.log(params.toString());
+            // // 构造新的哈希字符串
+            // let newHash = '';
+            // for (const [key, value] of params.entries()) {
+            //     newHash += `${key}=${value}&`
+            // }
+            // newHash = newHash.slice(0, -1); // 删除最后一个字符
+            window.location.hash = params.toString(); // 更新 URL 的哈希部分
         }
         //改变tab按钮的选中和非选中样式，
         function showTab(showtabid) {
