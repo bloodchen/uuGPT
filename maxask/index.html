@@ -175,7 +175,6 @@
             document.getElementById('ai_loading').style.display = 'none';
         }
     </script>
-
     <script>
         // Helper function to set a cookie
         function setCookie(name, value, days) {
@@ -263,7 +262,7 @@
                 }
 
             } else {
-                if (ai_q != old_ai_q && ai_q !=null && ai_q !="") {
+                if (ai_q != old_ai_q && ai_q != null && ai_q != "") {
                     aiiframe.contentWindow.postMessage(ai_q, '*');
                     old_ai_q = ai_q;
                 }
@@ -276,9 +275,9 @@
             showGoogleResult(0);
         }
         //根据屏幕高度改变ai输入框位置，让输入框处于屏幕最下方
-        function handleResize(){
+        function handleResize() {
             let viewHight = document.documentElement.clientHeight;
-            document.getElementById('aiwrapper').style.height = (viewHight - (showHeader?165:75)) + 'px';
+            document.getElementById('aiwrapper').style.height = (viewHight - (showHeader ? 165 : 75)) + 'px';
         }
     </script>
     <script>
@@ -289,7 +288,22 @@
         var isShowedHint = getCookie('isShowedHint');
         var showHeader = false;//是否显示header
         var old_ai_q = '';
+        const order = getHashParamValue('tab_order');
 
+        if (order) {
+            const tab_order = order.split('');
+            const tabarea = document.getElementById('tabarea');
+            const tabs = [];
+            const show_header = document.getElementById('show_header');
+            tab_order.forEach(e => {
+                tabs.push(document.getElementById('result_tab_' + e));
+            });
+            tabarea.innerHTML = '';
+            tabs.forEach(e => {
+                tabarea.appendChild(e);
+            });
+            tabarea.appendChild(show_header);
+        }
         //按cookie决定是否显示“带？进ai”的提示
         if (!isShowedHint) {
             document.getElementById('hint').classList.remove('hide');
@@ -307,7 +321,7 @@
         //根据之前决定的tabid，显示对应页面
         if (tabid == 2) {
             showAISearch(ai_q);
-        }else{
+        } else {
             showGoogleResult(tabid);
         }
         //初始化AI页高度
@@ -353,6 +367,7 @@
         })
 
         window.onload = () => {
+
             //因为修改的是google加载的组件，所以必须在window.onload里做google组件的监听，不然找不到id
             document.getElementsByClassName('gsc-search-button gsc-search-button-v2')[0].addEventListener('click', back2Search);
             let gs_input = document.getElementById('gsc-i-id1');
