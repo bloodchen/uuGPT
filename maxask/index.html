@@ -412,19 +412,21 @@
         var isShowedHint = getCookie('isShowedHint');
         var showHeader = false;//是否显示header
         var old_ai_q = '';
-        const order = getHashParamValue('tab_order');
-        const defaultOrder = '012';
+        let order = getHashParamValue('tab_order');
+        const defaultOrder = '201';
         //修改defaultOrder的值即可自定义默认的tab顺序，#后参数tab_order可以通过url参数定义web顺序。 0:web; 1:image 2:aisearch
 
-        if (order=="") order = defaultOrder;
- 
+        if (order==null) order = defaultOrder;
         if (order) {
             const tab_order = order.split('');
             const tabarea = document.getElementById('tabarea');
             const tabs = [];
             const show_header = document.getElementById('show_header');
             tab_order.forEach(e => {
-                tabs.push(document.getElementById('result_tab_' + e));
+                const tab = document.getElementById('result_tab_' + e);
+                if (tab) {
+                    tabs.push(tab); // 这里确保 tab 存在才加入数组
+                }
             });
             tabarea.innerHTML = '';
             tabs.forEach(e => {
@@ -432,7 +434,7 @@
             });
             tabarea.appendChild(show_header);
         }
-        //按cookie决定是否显示“带？进ai”的提示
+        //按cookie决定是否显示?进入ai的提示
         if (!isShowedHint) {
             document.getElementById('hint').classList.remove('hide');
             document.getElementById('hint').classList.add('show');
@@ -445,6 +447,9 @@
         //如果query中带问号，直接显示AI页
         if (ai_q && (ai_q.endsWith('?') || ai_q.endsWith('？'))) {
             tabid = 2;
+        } else if (order && order[0] !== '0') {
+            // 如果 order 第一个字符不是 0，将 tabid 设置为 order 的第一位
+            tabid = parseInt(order[0], 10);
         }
         //根据之前决定的tabid，显示对应页面
         if (tabid == 2) {
@@ -522,8 +527,20 @@
                 document.getElementById('result_tab_1').classList.remove('hide');
             }
             if(gtabs.length>0){
-                document.getElementById('result_tab_0').classList.remove('hide');
-                document.getElementById('gsloaded_show_header').classList.remove('hide');
+                const resultTab0 = document.getElementById('result_tab_0');
+                const gsloadedShowHeader = document.getElementById('gsloaded_show_header');
+
+                if (resultTab0) {
+                    resultTab0.classList.remove('hide');
+                } else {
+                    console.warn("Element with ID 'result_tab_0' not found.");
+                }
+
+                if (gsloadedShowHeader) {
+                    gsloadedShowHeader.classList.remove('hide');
+                } else {
+                    console.warn("Element with ID 'gsloaded_show_header' not found.");
+                }
             }
 
             document.getElementById('loading_skeleton').style.display = 'none';
