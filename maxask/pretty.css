@@ -15,7 +15,63 @@ body {
   margin: 0;
 }
 
-/* 针对新样式文件bublegum的调整  */
+/* 自定义tab */
+.tabarea {
+  display: flex;
+  padding: 0 10px;
+  border-bottom: 1px solid #e5e5e5;
+  gap: 20px;
+  position: relative;
+}
+
+.tabitem {
+  display: block;
+  padding: 10px 10px;
+  min-width: 72px;
+  color: #666;
+  text-align: center;
+  line-height: 1.5;
+  border-radius: 2px;
+}
+
+.tabitem-inactive {
+  transition: all 0.2s ease;
+  border-color: transparent;
+  color: #666;
+  cursor: pointer;
+}
+
+.tabitem-inactive:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.tabitem-active {
+  border-bottom: 4px solid #1a73e8;
+  color: #1a73e8;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.unfoldsearch {
+  width: 32px;
+  height: 32px;
+  border-radius: 5px;
+  background-image: url(toggle.svg);
+  display: block;
+  background-repeat: no-repeat;
+  background-position: center;
+  top: 10px;
+  right: 20px;
+  position: absolute;
+  transition: all 0.15s ease;
+}
+
+.unfoldsearch:hover {
+  background-color: #00000010;
+}
+
+/* 针对新样式文件bublegum的调整 */
 .gsc-control-cse {
   border: 0;
 }
@@ -51,6 +107,9 @@ body {
   transition: opacity 0.5s, margin-top 0.5s;
 }
 
+.gsst_a .gscb_a{
+  line-height: 32px;
+}
 /* google原有tab */
 .gsc-positioningWrapper {
   display: none;
@@ -83,7 +142,6 @@ body {
   z-index: 10;
 }
 
-
 @media (min-width: 1369px) {
   .aiwrapper,
   .mainarea {
@@ -100,7 +158,6 @@ body {
     right: calc(30vw - 172px);
   }
 }
-
 
 @media only screen and (min-width: 769px) {
   .cse-header {
@@ -297,7 +354,8 @@ body {
     width: 330px;
   }
 
-  table.gsc-input{}
+  table.gsc-input {
+  }
 
   .gsc-search-button {
     width: 60px;
@@ -447,7 +505,7 @@ body {
     justify-content: space-between;
   }
 
-  .gsc-search-box tbody{
+  .gsc-search-box tbody {
     width: 100%;
   }
 
@@ -479,6 +537,7 @@ body {
     /* padding: 6px 5px; */
     margin-top: 2px;
     padding-left: 3px !important;
+    line-height: 30px;
   }
 
   .gsc-control-cse,
@@ -489,7 +548,11 @@ body {
   .gs-promotion-image-box img.gs-promotion-image,
   .gs-web-image-box-portrait img.gs-image,
   .gs-web-image-box-landscape img.gs-image {
-    border-radius: 8px;
+    border-radius: 4px;
+  }
+
+  .gs-image-box{
+    margin-right: 4px;
   }
 
   .gs-webResult .gs-snippet,
@@ -514,7 +577,7 @@ body {
     color: #1a0dab !important;
   }
 
-  #glogo{
+  #glogo {
     /* display: none; */
     position: absolute;
     height: 12px;
@@ -562,7 +625,7 @@ body {
 }
 
 .hint-close:hover {
-  background-color:#0000001a
+  background-color: #0000001a;
 }
 
 .hint.show {
