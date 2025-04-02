@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Google 登录示例（FedCM + GIS fallback）</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<body>
+    <h1>登录示例</h1>
+
+    <!-- GIS fallback 登录按钮容器 -->
+    <div id="gis-login-button" style="display: none;">
+        <div id="g_id_onload" data-client_id="111015791863-mvevc0jau39k9mrocfisr6cn9nr39pqj.apps.googleusercontent.com"
+            data-callback="handleCredentialResponse" data-auto_prompt="false">
+        </div>
+
+        <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="signin_with"
+            data-shape="rectangular">
+        </div>
+    </div>
+
+    <!-- FedCM 登录按钮 -->
+    <button id="fedcm-login" style="display: none;">使用 Google 登录（FedCM）</button>
+
+    <script>
+        const CLIENT_ID = "111015791863-mvevc0jau39k9mrocfisr6cn9nr39pqj.apps.googleusercontent.com";
+
+        // 判断是否支持 FedCM
+        async function tryFedCMLogin() {
+            try {
+                const credential = await navigator.credentials.get({
+                    identity: {
+                        providers: [{
+                            configURL: 'https://accounts.google.com/gsi/fedcm.json',
+                            clientId: CLIENT_ID
+                        }]
+                    },
+                    mediation: 'optional'
+                });
+
+                if (credential) {
+                    // FedCM 成功登录
+                    console.log("FedCM 登录成功:", credential);
+                    handleCredentialResponse({ credential: credential.token });
+                } else {
+                    console.log("用户取消 FedCM 登录");
+                }
+            } catch (err) {
+                console.error("FedCM 登录失败:", err);
+            }
+        }
+
+        function handleCredentialResponse(response) {
+            console.log("接收到 Google ID Token:", response.credential);
+
+            // 示例：发送到你后端验证
+            fetch("https://api.uugpt.com/user/verify-google-token", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token: response.credential })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    console.log("登录成功:", data);
+                    alert("欢迎，" + (data.name || "用户"));
+                });
+        }
+
+        // 初始化流程
+        window.onload = () => {
+            const isFedCMCapable = !!navigator.credentials?.get;
+
+            if (isFedCMCapable) {
+                // 显示 FedCM 按钮
+                document.getElementById("fedcm-login").style.display = "inline-block";
+                document.getElementById("fedcm-login").onclick = tryFedCMLogin;
+            } else {
+                // 回退到 GIS 按钮
+                document.getElementById("gis-login-button").style.display = "block";
+            }
+        };
+    </script>
+</body>
+
+</html>
