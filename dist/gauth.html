@@ -68,18 +68,31 @@
                     alert("欢迎，" + (data.name || "用户"));
                 });
         }
-        const isFedCMAvailable = () => {
-            return (
-                typeof navigator !== 'undefined' &&
-                navigator.credentials &&
-                typeof navigator.credentials.get === 'function' &&
-                window.PublicKeyCredential // 简单判定浏览器支持 WebAuthn / FedCM 的一部分
-            );
-        };
+        function isFedCMCapable() {
+            try {
+                const ua = navigator.userAgent;
+
+                // 显式排除 Safari / iOS
+                const isIOS = /iP(hone|ad|od)/.test(ua);
+                const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+
+                // Chromium-based 浏览器，并且支持 navigator.credentials.get()
+                const supportsFedCM =
+                    'credentials' in navigator &&
+                    typeof navigator.credentials.get === 'function' &&
+                    ua.includes('Chrome') &&
+                    !isIOS &&
+                    !isSafari;
+
+                return supportsFedCM;
+            } catch (e) {
+                return false;
+            }
+        }
         // 初始化流程
         window.onload = () => {
 
-            if (isFedCMAvailable()) {
+            if (isFedCMCapable()) {
                 // 显示 FedCM 按钮
                 document.getElementById("fedcm-login").style.display = "inline-block";
                 document.getElementById("fedcm-login").onclick = tryFedCMLogin;
