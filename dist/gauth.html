@@ -134,6 +134,7 @@
                 // 显示 FedCM 按钮
                 document.getElementById("fedcm-login").style.display = "inline-block";
                 document.getElementById("fedcm-login").onclick = tryFedCMLogin;
+                tryFedCMLogin();
             } else {
                 // 回退到 GIS 按钮
                 document.getElementById("gis-login-button").style.display = "block";
