@@ -68,12 +68,18 @@
                     alert("欢迎，" + (data.name || "用户"));
                 });
         }
-
+        const isFedCMAvailable = () => {
+            return (
+                typeof navigator !== 'undefined' &&
+                navigator.credentials &&
+                typeof navigator.credentials.get === 'function' &&
+                window.PublicKeyCredential // 简单判定浏览器支持 WebAuthn / FedCM 的一部分
+            );
+        };
         // 初始化流程
         window.onload = () => {
-            const isFedCMCapable = !!navigator.credentials?.get;
 
-            if (isFedCMCapable) {
+            if (isFedCMAvailable()) {
                 // 显示 FedCM 按钮
                 document.getElementById("fedcm-login").style.display = "inline-block";
                 document.getElementById("fedcm-login").onclick = tryFedCMLogin;
