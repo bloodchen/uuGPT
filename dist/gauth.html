@@ -4,6 +4,36 @@
 <head>
     <meta charset="UTF-8">
     <title>Google 登录示例（FedCM + GIS fallback）</title>
+    <style>
+        .google-login-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            background-color: #fff;
+            color: #555;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .google-login-button:hover {
+            background-color: #f1f1f1;
+        }
+
+        .google-login-button:active {
+            transform: scale(0.98);
+        }
+
+        .google-logo {
+            width: 20px;
+            height: 20px;
+        }
+    </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
@@ -22,7 +52,10 @@
     </div>
 
     <!-- FedCM 登录按钮 -->
-    <button id="fedcm-login" style="display: none;">使用 Google 登录（FedCM）</button>
+    <button id="fedcm-login" class="google-login-button">
+        <img class="google-logo" src="https://developers.google.com/identity/images/g-logo.png" alt="G">
+        使用 Google 登录
+    </button>
 
     <script>
         const CLIENT_ID = "111015791863-mvevc0jau39k9mrocfisr6cn9nr39pqj.apps.googleusercontent.com";
