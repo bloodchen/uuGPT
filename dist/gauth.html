@@ -65,9 +65,11 @@
     <script>
         const CLIENT_ID = "111015791863-mvevc0jau39k9mrocfisr6cn9nr39pqj.apps.googleusercontent.com";
 
+
         // 判断是否支持 FedCM
         async function tryFedCMLogin() {
             try {
+
                 const credential = await navigator.credentials.get({
                     identity: {
                         providers: [{
