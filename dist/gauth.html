@@ -64,7 +64,7 @@
 
     <script>
         const CLIENT_ID = "111015791863-mvevc0jau39k9mrocfisr6cn9nr39pqj.apps.googleusercontent.com";
-
+        let loginInProgress = false;
         // 判断是否支持 FedCM
         async function tryFedCMLogin() {
             try {
@@ -77,7 +77,7 @@
                     },
                     mediation: 'optional'
                 });
-
+                loginInProgress = true;
                 if (credential) {
                     // FedCM 成功登录
                     console.log("FedCM 登录成功:", credential);
@@ -87,6 +87,8 @@
                 }
             } catch (err) {
                 console.error("FedCM 登录失败:", err);
+            } finally {
+                loginInProgress = false; // 无论成功失败都重置状态
             }
         }
 
@@ -134,7 +136,7 @@
                 // 显示 FedCM 按钮
                 document.getElementById("fedcm-login").style.display = "inline-block";
                 document.getElementById("fedcm-login").onclick = tryFedCMLogin;
-                tryFedCMLogin();
+                //tryFedCMLogin();
             } else {
                 // 回退到 GIS 按钮
                 document.getElementById("gis-login-button").style.display = "block";
