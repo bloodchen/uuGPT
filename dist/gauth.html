@@ -68,6 +68,7 @@
         // 判断是否支持 FedCM
         async function tryFedCMLogin() {
             try {
+
                 const credential = await navigator.credentials.get({
                     identity: {
                         providers: [{
