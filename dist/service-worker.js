@@ -1,4 +1,4 @@
-const CACHE_NAME = 'uugpt-pwa-v1.0.1';
+const CACHE_NAME = 'uugpt-pwa-v1.0.2';
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
