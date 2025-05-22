@@ -6,6 +6,7 @@
     "background_color": "#ffffff",
     "theme_color": "#e5e7eb",
     "form_factor":"wide",
+    "version": "v1.0.1",
     "icons": [
       {
         "src": "/uugpt_favion-16.png",

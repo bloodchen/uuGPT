@@ -1,8 +1,23 @@
-const CACHE_NAME = 'uugpt-pwa-v1.0.0';
-self.addEventListener('install', () => {
-    self.skipWaiting();
+const CACHE_NAME = 'uugpt-pwa-v1.0.1';
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll([
+        '/',
+        '/uugpt_favtion-16.png', // 确保路径包含新图标
+        '/uugpt_favtion-18.png',
+        '/uugpt_favtion-32.png',
+        '/uugpt_favtion-64.png',
+        '/uugpt_favtion-128.png',
+        '/uugpt_favtion-192.png',
+        '/uugpt_favtion-512.png',
+        '/manifest.json'
+      ]);
+    })
+  );
 });
-  
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
