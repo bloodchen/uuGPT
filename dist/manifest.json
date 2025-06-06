@@ -49,7 +49,7 @@
   "background_color": "#ffffff",
   "theme_color": "#e5e7eb",
   "form_factor": "wide",
-  "version": "v1.0.2",
+  "version": "v1.0.3",
   "display_override": [
     "window-controls-overlay"
   ],
