@@ -13,8 +13,10 @@ export function setMessagesHistory(msg: any): Promise<void> {
 }
 
 export function sendRegularMessage(msg: any) {
+
     let currentMessageHistory = get(messages);
     currentMessageHistory = [...currentMessageHistory, { role: "user", content: msg, isDisliked: false, isLiked: false }];
+    
     setMessagesHistory(currentMessageHistory);
     sendMessage(msg, -1);
 }
@@ -28,17 +30,18 @@ export function sendRetryMessage(msg: any, mid: number) {
         if (currentMessageHistory[mid].role == 'user') {
             currentMessageHistory.splice(mid, 0, {
                 role: 'assistant',
-                content: "█",
+                content: "●​",
                 isLiked: false,
                 isDisliked: false
             })
         } else {
-            currentMessageHistory[mid].content = "█";
+            currentMessageHistory[mid].content = "●​";
         }
     }
     setMessagesHistory(currentMessageHistory);
     sendMessage(msg, mid);
 }
+
 
 export function clearChat() {
     messages.set([]);

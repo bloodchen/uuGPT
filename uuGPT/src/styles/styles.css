@@ -115,11 +115,14 @@ padding-bottom: 0.5rem;
 .toolbelt:hover{
 
 }
-.btn-custom {
-  @apply flex text-[0.8rem] px-[0.4rem] h-[1.75rem] rounded items-center gap-1 relative hover:bg-themegreyhover;
+.btn-custom,
+.btn-custom-down
+ {
+  @apply flex text-[0.8rem] px-[0.4rem] h-[1.75rem] rounded items-center gap-1 relative hover:bg-themegreyhover active:bg-themegreyhover;
   /* display: none */
 }
-.btn-custom::after {
+.btn-custom::after,
+.btn-custom-down::after {
   content: attr(data-tooltip);;
   position: absolute;
   bottom: 128%; /* 工具提示在图标上方 */
@@ -133,11 +136,13 @@ padding-bottom: 0.5rem;
   white-space: nowrap;
   opacity: 0;
   visibility: hidden;
+  z-index: 1000;
   transition: opacity 0.2s ease-in-out;
 }
 
 /* 工具提示的小三角形 */
-.btn-custom::before {
+.btn-custom::before,
+.btn-custom-down::before {
   content: "";
   position: absolute;
   bottom: 90%; /* 小三角形在工具提示和图标之间 */
@@ -148,11 +153,27 @@ padding-bottom: 0.5rem;
   border-color: #000 transparent transparent transparent; /* 上边是黑色，其他透明 */
   opacity: 0;
   visibility: hidden;
+  z-index: 1000;
   transition: opacity 0.2s ease-in-out;
 }
+.btn-custom-hover-hide::before{
+  background:#0000;
+  border-color: #0000;
+}
+
+.btn-custom-down::before{
+  top:90%;
+}
+
+.btn-custom-down::after{
+  top:128%;
+}
+
 
 .btn-custom:hover::after,
-.btn-custom:hover::before {
+.btn-custom:hover::before,
+.btn-custom-down:hover::after,
+.btn-custom-down:hover::before {
   opacity: 1;
   visibility: visible;
 }
@@ -329,16 +350,11 @@ textarea::placeholder {
   font-size: 0.875rem; /* 等同于 14px */
 }
 
-/* 段落样式 */
-.message-display p {
-  margin: 0.25em 0;
-}
-
 /* 列表样式 */
 .message-display ul,
 .message-display ol {
   padding-left: 1.5em;
-  margin: 1em 0;
+  margin: 0;
   list-style:outside;
 }
 
@@ -495,4 +511,98 @@ code, pre {
   100% {
     transform: rotate(0deg);
   }
+}
+
+.share-message-display blockquote {
+  border:1px solid #ededed!important;
+  padding-left: 1em;
+  margin: 1em 0;
+  color: #333;
+  background-color: #f2f2f2 !important;
+  border-radius: 4px!important;
+}
+
+/* 代码块样式 */
+.share-message-display pre,
+.share-message-display code {
+  background-color: #f2f2f2 !important;
+  padding: 0;
+  border-radius: 4px!important;
+  color:#333;
+  margin: 0!important;
+}
+
+.share-message-display p code{
+  display: inline-block!important;
+}
+
+.share-message-display .code-container{
+  width: 100% !important;
+  max-width: 100%!important;
+  position: relative;
+  margin: 0;
+}
+
+.share-message-display .copycode{
+  margin: 0 !important;
+  display: none !important;
+}
+
+.share-message-display h1,
+.share-message-display h2,
+.share-message-display h3,
+.share-message-display h4,
+.share-message-display h5,
+.share-message-display h6{
+  font-weight: 900;
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+/* 列表样式 */
+.share-message-display ul,
+.share-message-display ol {
+  padding-left: 1.5em;
+  margin: 0;
+  list-style:outside;
+}
+
+.share-message-display ul li,
+.share-message-display ol li {
+  margin-bottom: 0.5em;
+  display: list-item;
+}
+
+
+
+.share-message-display ol li::marker,
+.share-message-display ul li::marker{
+  color: #333 !important;
+  opacity: 1;
+}
+
+
+.share-message-display ul li{
+  list-style-type: disc;
+}
+
+.share-message-display ul li ul li{
+  list-style-type: circle;
+}
+
+.share-message-display ol li ul li{
+  list-style-type: circle;
+}
+
+
+.share-message-display ol li {
+  list-style-type: decimal;
+}
+
+.share-message-display ol li ol li{
+  list-style-type: lower-alpha;
+}
+
+.share-message-display p {
+  font-weight: normal;
 }

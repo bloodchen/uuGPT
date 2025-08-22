@@ -1,0 +1,1189 @@
+<script lang="ts">
+  import { flip } from "svelte/animate"; //不能直接导入animate，需要导入animate里的方法
+  import { t } from "svelte-i18n"; // 导入本地化方法
+  import { onMount } from "svelte";
+  import { getErrorMessage } from "../utils/generalUtils";
+  import { createEventDispatcher } from "svelte";
+  import uugpIcon from "../assets/uugpt_favion_small.png";
+  import accountIcon from "../assets/login/account.svg";
+  import avtarIcon from "../assets/login/avtar_placeholder.svg";
+  import backIcon from "../assets/login/back.svg";
+  import closeIcon from "../assets/login/close.svg";
+  import eyeCloseIcon from "../assets/login/eyeclose.svg";
+  import eyeOpenIcon from "../assets/login/eyeopen.svg";
+  import forgotIcon from "../assets/login/forgot.svg";
+  import googleIcon from "../assets/login/google.svg";
+  import maxthonIcon from "../assets/login/maxthon.svg";
+  import passwordIcon from "../assets/login/password.svg";
+  import resetpasswordIcon from "../assets/login/resetpassword.svg";
+  import verifyIcon from "../assets/login/verify.svg";
+  import {
+    showErrorMessage,
+    showSuccessMessage,
+  } from "../stores/globalParamentStores";
+  import {
+    checkUserEmail,
+    sendUserEmailCode,
+    checkverifycode,
+    setUserPassword,
+    resetUserPassword,
+    userLogin,
+    sendForgetCode,
+    changeUserPassword,
+  } from "../manages/userinfoManages";
+  import { writable, get } from "svelte/store";
+  import { userEmail } from "../stores/userStores";
+  import { isGuest } from "../stores/globalParamentStores";
+  import { browser } from "$app/environment";
+  export let isPage; //通过父组件判断是否显示关闭按钮
+  export let isResetPassword;
+  // export let isResetPassword = false;//通过父组件判断是否是重置密码窗口
+  const dispatch = createEventDispatcher();
+  const status_email = "email";
+  const status_password = "password";
+  const status_vcode = "vcode";
+  const status_resetPassword = "resetPassword";
+  const status_forgetPassword = "forgetPassword";
+  const currentStatus: string[] = [];
+  const loginPageName = writable(""); //当前窗口
+
+  let email = ""; //输入的邮箱
+  let password = ""; //输入的密码
+  let confirmPassword = ""; //输入的确认密码
+  let verifyCode = "";
+  let isAgree = true; //同意协议
+  let showPassword = false; // 是否显示密码明文
+  let isWaitting = false; // 是否正在加载中，用于控制按钮的禁用和loading状态
+  let sendedVcode = false; // 是否正在发送验证码
+  let timeLeft = 0; //验证码倒计时
+  let error = "";
+  let successMessage = "";
+  //忘记密码 f_
+  let forgotPassword = false; //是否忘记密码
+  let forgetPasswordCode = ""; //忘记密码的邮箱验证码，跟注册时的验证码时两个接口
+  let f_password = "";
+  let f_confirmPassword = "";
+  let f_verifyCode = "";
+  let isMaxthon = false; //判断是否是maxthon浏览器
+
+  let isLoginLoading = false; //Maxthon和Google登录loading状态，用于控制按钮的禁用和loading状态
+  let loginType = "uugpt"; //登录类型，uugpt或者maxthon或者google，用于控制登录按钮的样式和禁用状态，默认是uugpt
+  let canFedCM = true;   //因为浏览器有第三方登录限制，如果用户在fed登录时取消，浏览器自动阻止站点使用fed第三方登录，所以需要保存状态，以便重新使用gis登录
+  let showGisButton = false; //是否显示GIS按钮，用于控制登录按钮的样式和禁用状态，默认是false
+  let canGoogleLogin = false; //是否可以使用Google登录，默认是false
+
+  loginPageName.subscribe((value) => {
+    password = "";
+    confirmPassword = "";
+    verifyCode = "";
+    showPassword = false;
+    isWaitting = false;
+  });
+
+  onMount(async () => {
+    if (typeof maxthon === "undefined") {
+      isMaxthon = false;
+    } else {
+      isMaxthon = true;
+    }
+    if (isResetPassword) {
+      email = get(userEmail);
+      forgotPassword = true;
+      changeStatus(status_vcode);
+    } else {
+      changeStatus(status_email);
+    }
+    if (browser) {
+      window._showErrorMessage = showErrorMessage;
+      window._showSuccessMessage = showSuccessMessage;
+    }
+
+  });
+
+  function googleloaded(){
+    canGoogleLogin = true;
+    if (isFedCMCapable()) {
+      canFedCM = true;
+    } else {
+      canFedCM = false;
+      showGisButton = true;
+    }
+  }
+
+  function isFedCMCapable() {
+    try {
+      const ua = navigator.userAgent;
+
+      // 显式排除 Safari / iOS
+      const isIOS = /iP(hone|ad|od)/.test(ua);
+      const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+
+      // Chromium-based 浏览器，并且支持 navigator.credentials.get()
+      const supportsFedCM =
+        "credentials" in navigator &&
+        typeof navigator.credentials.get === "function" &&
+        ua.includes("Chrome") &&
+        !isIOS &&
+        !isSafari;
+
+      return supportsFedCM;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function tryFedCMLogin() {
+    try {
+      const credential = await navigator.credentials.get({
+        identity: {
+          providers: [
+            {
+              configURL: "https://accounts.google.com/gsi/fedcm.json",
+              clientId:
+                "111015791863-mvevc0jau39k9mrocfisr6cn9nr39pqj.apps.googleusercontent.com",
+            },
+          ],
+        },
+        mediation: "optional",
+      });
+
+      if (credential) {
+        // FedCM 成功登录
+        // console.log("FedCM 登录成功:", credential);
+        showSuccessMessage(
+          $t("login.loginSuccess", { default: "Login success" }),
+        );
+        handleCredentialResponse({ credential: credential.token });
+      } else {
+        // console.log("用户取消 FedCM 登录");
+
+        isLoginLoading = false;
+        canFedCM = false;
+        showGisButton = true;
+        loginType = "uugpt";
+      }
+    } catch (err) {
+      // console.error("FedCM 登录失败:", err);
+      isLoginLoading = false;
+      canFedCM = false;
+      showGisButton = true;
+      loginType = "uugpt";
+      showErrorMessage($t("login.loginError", { default: "Login error" }));
+    }
+  }
+
+  //验证邮箱
+  async function handleEmailSubmit() {
+    // 格式验证
+    if (!validateEmail(email)) {
+      showErrorMessage(
+        $t("login.emailFormatError", { default: "Email format Error" }),
+      );
+      return;
+    }
+    //勾选同意协议
+    if (!isAgree) {
+      showErrorMessage(
+        $t("login.agreeTermsError", {
+          default: "You must agree the Terms to continue",
+        }),
+      );
+      return;
+    }
+    isWaitting = true;
+    let res = await checkUserEmail(email);
+    isWaitting = false;
+    if (res === 1) {
+      showErrorMessage(getErrorMessage(res.toString()));
+      return;
+    }
+    if (res) {
+      changeStatus(status_password);
+    } else {
+      changeStatus(status_vcode);
+    }
+  }
+  //发送验证码
+  async function handleSendVcode() {
+    sendedVcode = true;
+    timeLeft = 60;
+    let timer = setInterval(() => {
+      if (timeLeft > 0) {
+        timeLeft--;
+      } else {
+        sendedVcode = false;
+        clearInterval(timer);
+      }
+    }, 1000);
+    let res = await sendUserEmailCode(email);
+    isWaitting = false;
+    if (res != 0) {
+      showErrorMessage(getErrorMessage(res.toString()));
+      return;
+    }
+    showSuccessMessage(
+      $t("login.verificationCodeSentSuccess", { default: "Sended" }),
+    );
+  }
+  //验证邮箱验证码
+  async function handleCheckVcode() {
+    let regex = /^\d{6}$/;
+    if (!verifyCode) {
+      showErrorMessage(
+        $t("login.enterVerificationCodeError", {
+          default: "Wrong verification code",
+        }),
+      );
+      return;
+    }
+    if (!regex.test(verifyCode)) {
+      showErrorMessage(
+        $t("login.invalidVerificationCodeError", {
+          default: "invalid verification code",
+        }),
+      );
+      return;
+    }
+    isWaitting = true;
+    let res = await checkverifycode(verifyCode);
+    isWaitting = false;
+    if (res != 0) {
+      showErrorMessage(getErrorMessage(res.toString()));
+      return;
+    }
+    showSuccessMessage(
+      $t("login.verifySuccess", { default: "Verify success" }),
+    );
+    changeStatus(status_resetPassword);
+  }
+  //设置密码
+  async function handleSetPassword() {
+    if (!password || !confirmPassword) {
+      showErrorMessage(
+        $t("login.enterPasswordError", {
+          default: "You must enter a password",
+        }),
+      );
+      return;
+    }
+    if (password != confirmPassword) {
+      showErrorMessage(
+        $t("login.passwordRepeatError", { default: "Passwords do not match" }),
+      );
+      return;
+    }
+    const regex_chat = /^[a-zA-Z0-9@#$%^&*!]+$/;
+    const regex_length = /^.{6,24}$/;
+    if (!regex_chat.test(password)) {
+      showErrorMessage(
+        $t("login.invalidPasswordCharacterError", {
+          default: "Invalid password character",
+        }),
+      );
+      return;
+    }
+    if (!regex_length.test(password)) {
+      showErrorMessage(
+        $t("login.passwordLengthError", {
+          default: "Password length must be between 6 and 24 characters",
+        }),
+      );
+      return;
+    }
+    isWaitting = true;
+    let res;
+    // if (forgotPassword) {
+    //   res = await resetUserPassword(email, password);
+    // } else {changeUserPassword
+    res = await changeUserPassword(email, password);
+    // }
+    // let res = await setUserPassword(email,password);
+    isWaitting = false;
+
+    if (res != 0) {
+      showErrorMessage(getErrorMessage(res.toString()));
+      return;
+    }
+
+    res = await userLogin(email, password);
+    if (res.code != 0) {
+      showErrorMessage(getErrorMessage(res.msg.toString()));
+      return;
+    }
+
+    showSuccessMessage(
+      forgotPassword
+        ? $t("login.resetPasswordSuccess", { default: "Reset Success" })
+        : $t("login.loginSuccess", { default: "Login Success" }),
+    );
+    forgotPassword = false;
+    loginSuccess();
+  }
+  //登录
+  async function handleLogin() {
+    if (!password) {
+      showErrorMessage(
+        $t("login.passwordPlaceholder", { default: "Password" }),
+      );
+      return;
+    }
+
+    isWaitting = true;
+    let res = await userLogin(email, password);
+    isWaitting = false;
+    if (res.code != 0) {
+      showErrorMessage(getErrorMessage(res.msg.toString()));
+      return;
+    }
+    if (get(isGuest)) {
+      localStorage.setItem("current_chat_id", "0");
+      isGuest.set(false);
+    }
+    showSuccessMessage($t("login.loginSuccess", { default: "Loged in" }));
+    loginSuccess();
+  }
+  //忘记密码的邮箱验证码是单独的接口
+  async function handleSendForgetPasswordVscode() {
+    sendedVcode = true;
+    timeLeft = 60;
+    let timer = setInterval(() => {
+      if (timeLeft > 0) {
+        timeLeft--;
+      } else {
+        sendedVcode = false;
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    let data = await sendForgetCode(email);
+    isWaitting = false;
+    if (data != 0) {
+      showErrorMessage(getErrorMessage(data.toString()));
+      return;
+    }
+    showSuccessMessage(
+      $t("login.verificationCodeSentSuccess", { default: "Sended" }),
+    );
+  }
+
+  async function forgetPasswordSubmit() {
+    let data = await resetUserPassword(email, f_password, f_verifyCode);
+    if (data != 0) {
+      showErrorMessage(getErrorMessage(data.toString()));
+      return;
+    }
+    isWaitting = true;
+    let res = await userLogin(email, f_password);
+    isWaitting = false;
+    if (res.code != 0) {
+      showErrorMessage(getErrorMessage(res.msg.toString()));
+      return;
+    }
+    showSuccessMessage(
+      forgotPassword
+        ? $t("login.resetPasswordSuccess", { default: "Reset Success" })
+        : $t("login.loginSuccess", { default: "Loged in" }),
+    );
+    forgotPassword = false;
+    loginSuccess();
+  }
+
+  // 处理Google登录
+  function handleGoogleLogin() {
+    // 使用Google登录
+    isLoginLoading = true;
+    loginType = "google";
+    tryFedCMLogin();
+  }
+  // 处理Maxthon登录
+  function handleMaxthonLogin() {
+    isLoginLoading = true;
+    loginType = "maxthon";
+    const params = new URLSearchParams(window.location.search);
+    params.set("mxcallback", "mxcallback");
+    const newUrl = encodeURI(
+      `https://${window.location.hostname}${window.location.pathname}?${params.toString()}${window.location.hash}`,
+    );
+    let targetUrl = `https://my.maxthon.com/auth/login?redirect=${newUrl}`;
+
+    location.href = targetUrl;
+  }
+
+  function handleForgotPassword() {
+    forgotPassword = true;
+    changeStatus(status_forgetPassword);
+  }
+
+  function validateEmail(email: string) {
+    const re =
+      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(email);
+  }
+  //关闭窗口事件
+  function close() {
+    dispatch("close-card");
+  }
+  function loginSuccess() {
+    dispatch("login-success");
+  }
+  //切换窗口
+  function changeStatus(to: string) {
+    currentStatus.push(to);
+    loginPageName.set(to);
+  }
+  //返回
+  function back() {
+    currentStatus.pop();
+    // console.log(currentStatus);
+    loginPageName.set(currentStatus[currentStatus.length - 1]);
+  }
+</script>
+
+<svelte:head>
+  <script src="/js/google-Login.js"></script>
+  <script src="https://accounts.google.com/gsi/client" on:load={googleloaded}></script>
+</svelte:head>
+<div class={isPage ? "" : "login-viewbox"}>
+  <div class="flex items-center justify-center min-h-screen">
+    <div
+      class="bg-white p-6 md:p-10 rounded-lg shadow-md w-full h-screen max-w-[100vw] md:w-[32rem] md:max-w-[32rem] md:min-w-[32rem] md:max-h-[32rem] relative"
+      class:min-h-[35rem]={isMaxthon}
+    >
+      <div>
+        <!-- 关闭按钮 -->
+        {#if !isPage}
+          <button class="absolute top-4 right-4" on:click={close}>
+            <img
+              src={closeIcon}
+              alt={$t("login.close")}
+              class="w-10 h-10 text-gray-500 hover:bg-gray-200 rounded"
+            />
+          </button>
+        {/if}
+
+        <!-- 登录内容容器 -->
+        {#if $loginPageName === status_email}
+          <div class="animate-fade">
+            <h1
+              class="text-3xl font-semibold text-center mt-10 mb-10 flex items-center justify-center space-x-3"
+            >
+              <img src={uugpIcon} alt="uuGPT Logo" class="w-10 h-10" />
+              <span>uuGPT</span>
+            </h1>
+            <form on:submit={handleEmailSubmit}>
+              <label for="email" class="sr-only"
+                >{$t("login.email", { default: "Email" })}</label
+              >
+              <div class="relative w-full">
+                <img
+                  src={accountIcon}
+                  alt={$t("login.email", { default: "Email" })}
+                  class="absolute left-3 top-3 w-6 h-6 opacity-20"
+                />
+                <input
+                  type="email"
+                  class="w-full pl-12 p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-themegreen focus:border-transparent placeholder-gray-400"
+                  bind:value={email}
+                  required
+                  placeholder={$t("login.emailPlaceholder", {
+                    default: "Email",
+                  })}
+                />
+              </div>
+              <div class="flex items-center mb-4 w-full">
+                <input type="checkbox" bind:checked={isAgree} class="mr-2" />
+                <label for="terms" class="text-sm flex-1"
+                  >{$t("login.agreeTerms", { default: "I agree with the" })}
+                  <a
+                    class="hover:text-blue-700 hover:underline"
+                    href="./terms"
+                    target="_blank"
+                    >{$t("login.serviceTermsLink", { default: "EULA" })}</a
+                  >
+                  &
+                  <a
+                    class="hover:text-blue-700 hover:underline"
+                    href="./privacy"
+                    target="_blank"
+                    >{$t("home.footer.privacy", {
+                      default: "Privacy Policy",
+                    })}</a
+                  ></label
+                >
+              </div>
+              {#if !isMaxthon && !canGoogleLogin}
+                <div class="w-full h-10"></div>
+              {:else if isMaxthon || canGoogleLogin}
+                <div class="w-full h-4"></div>
+              {/if}
+              <button
+                disabled={isWaitting || isLoginLoading}
+                on:click={handleEmailSubmit}
+                type="submit"
+                class="w-full bg-themegreen py-3 rounded-md hover:bg-themegreenhover focus:outline-none focus:ring-2 focus:ring-themegreen disabled:opacity-50 flex items-center justify-center"
+              >
+                <span class="text-white font-semibold"
+                  >{$t("login.nextStep", { default: "Next" })}</span
+                >
+                <!-- 加载过程禁用按钮并显示loading动画 -->
+                {#if isWaitting}<span class="message-loader w-6 h-6 ml-3"
+                  ></span>{/if}
+              </button>
+            </form>
+
+            {#if isMaxthon || canGoogleLogin}           
+            <div class="flex items-center my-6">
+              <hr class="flex-grow border-gray-300" />
+              <span class="px-4 text-gray-500 text-sm"
+                >{$t("login.or", { default: "or" })}</span
+              >
+              <hr class="flex-grow border-gray-300" />
+            </div>
+            {/if}
+
+            {#if isMaxthon}
+              <div class="text-center">
+                <button
+                  on:click={handleMaxthonLogin}
+                  class="mb-3 w-full bg-white border border-gray-300 text-gray-700 text-sm py-2 font-medium rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 flex items-center justify-center"
+                >
+                  <img src={maxthonIcon} alt="Google" class="w-5 h-5 mr-2" />
+                  {$t("login.loginWithMaxthon", {
+                    default: "Continue with Maxthon",
+                  })}
+                  {#if isLoginLoading && loginType === "maxthon"}<span
+                      class="message-loader w-6 h-6 ml-3"
+                    />{/if}
+                </button>
+              </div>
+            {/if}
+
+            <!-- Google 登录 -->
+            <div class="text-center" style="{canGoogleLogin ? "display:block" : "display:none" }">
+              {#if canFedCM}
+                <button
+                  id="fedcm-login"
+                  on:click={handleGoogleLogin}
+                  class="mb-2 w-full bg-white border border-gray-300 text-gray-700 text-sm py-2 font-medium rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 flex items-center justify-center"
+                >
+                  <img src={googleIcon} alt="Google" class="w-5 h-5 mr-2" />
+                  {$t("login.loginWithGoogle")}
+                  {#if isLoginLoading && loginType === "google"}
+                    <span class="message-loader w-6 h-6 ml-3" />
+                  {/if}
+                </button>
+              {/if}
+              <!-- GIS fallback 登录按钮容器 -->
+              <div
+                id="gis-login-button"
+                style="display:block; {showGisButton
+                  ? 'display:block'
+                  : 'display:none'}"
+              >
+                <div
+                  id="g_id_onload"
+                  data-client_id="111015791863-mvevc0jau39k9mrocfisr6cn9nr39pqj.apps.googleusercontent.com"
+                  data-callback="handleCredentialResponse"
+                  data-auto_prompt="false"
+                ></div>
+
+                <div
+                  class="g_id_signin"
+                  data-type="standard"
+                  data-size="large"
+                  data-theme="outline"
+                  data-text="signin_with"
+                  data-shape="rectangular"
+                ></div>
+              </div>
+            </div>            
+          </div>
+        {/if}
+
+        <!-- 登录输入密码 -->
+        {#if $loginPageName === status_password}
+          <div class="animate-fade">
+            <!-- 登录框左上角标题栏 -->
+            <div class="flex items-center mb-6">
+              <button
+                on:click={back}
+                class="mr-2 text-gray-700 text-xl cursor-pointer transition-colors duration-300 hover:bg-gray-200 focus:outline-none rounded"
+              >
+                <img
+                  src={backIcon}
+                  alt={$t("login.back", { default: "back" })}
+                  class="w-8 h-8"
+                />
+              </button>
+              <span class="text-lg font-semibold"
+                >{$t("login.loginTitle", { default: "Login" })}</span
+              >
+            </div>
+
+            <!-- 填写密码表单 -->
+            <div class="mt-10">
+              <form on:submit|preventDefault={handleLogin}>
+                <h3 class="ml-1 mb-5 text-themegreen text-xl font-semibold">
+                  <span class="mr-3">🎉</span>{$t("login.welcomeBack")}
+                </h3>
+                <div class="mb-5 flex">
+                  <div
+                    class="flex items-center bg-gray-100 rounded-md p-2 pr-4"
+                  >
+                    <img src={avtarIcon} alt="uugpt user avatar" class="mr-3" />
+                    <span>{email ? email : "User"}</span>
+                  </div>
+                </div>
+                <div class="relative w-full mb-4">
+                  <!-- 左侧密码图标 -->
+                  <span
+                    class="absolute inset-y-0 left-0 flex items-center pl-3"
+                  >
+                    <img
+                      src={passwordIcon}
+                      alt="uupgt password icon"
+                      class="w-4 h-4 text-gray-400 opacity-20"
+                    />
+                  </span>
+                  <!-- 密码输入框 -->
+                  {#if showPassword}
+                    <input
+                      type="text"
+                      class="w-full pl-10 pr-10 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-themegreen focus:border-transparent placeholder-gray-400"
+                      bind:value={password}
+                      required
+                      autofocus
+                      placeholder={$t("login.passwordPlaceholder", {
+                        default: "Password",
+                      })}
+                    />
+                  {:else}
+                    <input
+                      type="password"
+                      class="w-full pl-10 pr-10 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-themegreen focus:border-transparent placeholder-gray-400"
+                      bind:value={password}
+                      required
+                      autofocus
+                      placeholder={$t("login.passwordPlaceholder", {
+                        default: "Password",
+                      })}
+                    />
+                  {/if}
+
+                  <!-- 右侧显示/隐藏密码图标 -->
+
+                  <button
+                    on:click={() => {
+                      showPassword = !showPassword;
+                    }}
+                    type="button"
+                    class="absolute inset-y-0 right-0 flex items-center px-3 cursor-pointer hover:bg-gray-200 rounded"
+                    aria-label="Toggle password visibility"
+                  >
+                    {#if showPassword}
+                      <img
+                        src={eyeOpenIcon}
+                        alt="uupgt password show icon"
+                        class="w-4 h-4 text-gray-400"
+                      />
+                    {:else}
+                      <img
+                        src={eyeCloseIcon}
+                        alt="uupgt password hide icon"
+                        class="w-4 h-4 text-gray-400 opacity-20"
+                      />
+                    {/if}
+                  </button>
+                </div>
+                <div class="h-8"></div>
+                <button
+                  disabled={isWaitting}
+                  on:click={handleLogin}
+                  type="submit"
+                  class="w-full bg-themegreen py-3 rounded-md hover:bg-themegreenhover focus:outline-none focus:ring-2 focus:ring-themegreen disabled:opacity-50 flex items-center justify-center"
+                >
+                  <span class="text-white font-semibold"
+                    >{$t("login.login", { default: "Login" })}</span
+                  >
+                  <!-- 加载过程禁用按钮并显示loading动画 -->
+                  {#if isWaitting}<span class="message-loader w-6 h-6 ml-3"
+                    ></span>{/if}
+                </button>
+              </form>
+              <!-- 忘记密码链接 -->
+              <div class="mt-6 text-center">
+                <button
+                  on:click={handleForgotPassword}
+                  class="text-sm text-themegreen hover:underline py-2 px-5"
+                >
+                  <span
+                    >{$t("login.forgotPassword", {
+                      default: "Forgot Password",
+                    })}</span
+                  >
+                </button>
+              </div>
+            </div>
+          </div>
+        {/if}
+
+        <!-- 输验证码 -->
+        {#if $loginPageName === status_vcode}
+          <div class="animate-fade">
+            <!-- 登录框左上角标题栏 -->
+            {#if !isResetPassword}
+              <div class="flex items-center mb-6">
+                <button
+                  on:click={back}
+                  class="mr-2 text-gray-700 text-xl cursor-pointer transition-colors duration-300 hover:bg-gray-200 focus:outline-none rounded"
+                >
+                  <img src={backIcon} alt={$t("login.back")} class="w-8 h-8" />
+                </button>
+                <span class="text-lg font-semibold"
+                  >{$t("login.enterVerificationTitle")}</span
+                >
+              </div>
+            {/if}
+            <div class="mt-10">
+              <form>
+                <p class="mb-2">
+                  {$t("login.enterVerificationCode", {
+                    values: { email: email },
+                  })}
+                </p>
+                <!-- 普通文本插值 {values:{翻译json里的字段名:实际的值}} -->
+                <!-- html插值，先在翻译json文件里写HTML，然后使用{@html $t('login.enterVerficationCode', { values:{ email:email} })} -->
+                <!-- 发送验证码按钮，有倒计时，加载完成后先自动发送一次 -->
+                <button
+                  disabled={sendedVcode}
+                  on:click={handleSendVcode}
+                  type="button"
+                  class="text-themegreen hover:underline py-2 mb-5"
+                >
+                  {sendedVcode
+                    ? $t("login.resendVerificationCode", {
+                        values: { timeLeft: timeLeft },
+                      })
+                    : $t("login.sendVerificationCode")}
+                </button>
+
+                <div class="relative w-full mb-4">
+                  <!-- 左侧验证图标 -->
+                  <span
+                    class="absolute inset-y-0 left-0 flex items-center pl-3"
+                  >
+                    <img
+                      src={verifyIcon}
+                      alt="uupgt password icon"
+                      class="w-4 h-4 text-gray-400 opacity-20"
+                    />
+                  </span>
+                  <input
+                    bind:value={verifyCode}
+                    type="text"
+                    class="w-full pl-10 pr-10 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-themegreen focus:border-transparent placeholder-gray-400"
+                    placeholder={$t("login.verificationCodePlaceholder", {
+                      default: "Verification Code",
+                    })}
+                    required
+                    autofocus
+                  />
+                </div>
+                <div class="h-8"></div>
+
+                <button
+                  disabled={isWaitting}
+                  on:click={handleCheckVcode}
+                  type="submit"
+                  class="w-full bg-themegreen text-white font-semibold py-3 rounded-md hover:bg-themegreenhover focus:outline-none focus:ring-2 focus:ring-themegreen"
+                >
+                  {$t("login.nextStep")}
+                </button>
+              </form>
+            </div>
+          </div>
+        {/if}
+        <!-- 忘记密码重置 -->
+        {#if $loginPageName === status_forgetPassword}
+          <div class="animate-fade">
+            <!-- 登录框左上角标题栏 -->
+            <div class="flex items-center mb-6">
+              <button
+                on:click={back}
+                class="mr-2 text-gray-700 text-xl cursor-pointer transition-colors duration-300 hover:bg-gray-200 focus:outline-none rounded"
+              >
+                <img src={backIcon} alt={$t("login.back")} class="w-8 h-8" />
+              </button>
+              <span class="text-lg font-semibold">
+                {$t("login.resetPasswordTitle", { default: "Reset Password" })}
+              </span>
+            </div>
+            <div class="mt-4">
+              <form>
+                <p class="mb-2">
+                  {$t("login.enterVerificationCode", {
+                    values: { email: email },
+                  })}
+                </p>
+
+                <!-- 发送验证码按钮，有倒计时，加载完成后先自动发送一次 -->
+                <button
+                  disabled={sendedVcode}
+                  on:click={handleSendForgetPasswordVscode}
+                  type="button"
+                  class="text-themegreen hover:underline py-2 mb-2"
+                >
+                  {sendedVcode
+                    ? $t("login.resendVerificationCode", {
+                        values: { timeLeft: timeLeft },
+                      })
+                    : $t("login.sendVerificationCode")}
+                </button>
+
+                <div class="relative w-full mb-4">
+                  <!-- 左侧验证码图标 -->
+                  <span
+                    class="absolute inset-y-0 left-0 flex items-center pl-3"
+                  >
+                    <img
+                      src={verifyIcon}
+                      alt="uupgt password icon"
+                      class="w-4 h-4 text-gray-400 opacity-20"
+                    />
+                  </span>
+                  <input
+                    bind:value={f_verifyCode}
+                    type="text"
+                    class="w-full pl-10 pr-10 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-themegreen focus:border-transparent placeholder-gray-400"
+                    placeholder={$t("login.verificationCodePlaceholder")}
+                    required
+                    autofocus
+                  />
+                </div>
+                <div class="relative w-full mb-4">
+                  <!-- 左侧密码图标 -->
+                  <span
+                    class="absolute inset-y-0 left-0 flex items-center pl-3"
+                  >
+                    <img
+                      src={passwordIcon}
+                      alt="uupgt password icon"
+                      class="w-4 h-4 text-gray-400 opacity-20"
+                    />
+                  </span>
+
+                  <!-- 密码输入框 -->
+                  {#if showPassword}
+                    <input
+                      type="text"
+                      class="w-full pl-10 pr-10 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-themegreen focus:border-transparent placeholder-gray-400"
+                      bind:value={f_password}
+                      required
+                      autofocus
+                      placeholder={$t("login.resetPasswordPlaceholder", {
+                        default: "Reset Password",
+                      })}
+                    />
+                  {:else}
+                    <input
+                      type="password"
+                      class="w-full pl-10 pr-10 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-themegreen focus:border-transparent placeholder-gray-400"
+                      bind:value={f_password}
+                      required
+                      autofocus
+                      placeholder={$t("login.resetPasswordPlaceholder", {
+                        default: "Reset Password",
+                      })}
+                    />
+                  {/if}
+                  <!-- 右侧显示/隐藏密码图标 -->
+                  <button
+                    on:click={() => {
+                      showPassword = !showPassword;
+                    }}
+                    type="button"
+                    class="absolute inset-y-0 right-0 flex items-center px-3 cursor-pointer hover:bg-gray-200 rounded"
+                    aria-label="Toggle password visibility"
+                  >
+                    {#if showPassword}
+                      <img
+                        src={eyeOpenIcon}
+                        alt="uupgt password show icon"
+                        class="w-4 h-4 text-gray-400"
+                      />
+                    {:else}
+                      <img
+                        src={eyeCloseIcon}
+                        alt="uupgt password hide icon"
+                        class="w-4 h-4 text-gray-400 opacity-20"
+                      />
+                    {/if}
+                  </button>
+                </div>
+                <div class="relative w-full mb-4">
+                  <!-- 左侧密码图标 -->
+                  <span
+                    class="absolute inset-y-0 left-0 flex items-center pl-3"
+                  >
+                    <img
+                      src={passwordIcon}
+                      alt="uupgt password icon"
+                      class="w-4 h-4 text-gray-400 opacity-20"
+                    />
+                  </span>
+                  <!-- 密码输入框 -->
+                  {#if showPassword}
+                    <input
+                      type="text"
+                      class="w-full pl-10 pr-10 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-themegreen focus:border-transparent placeholder-gray-400"
+                      bind:value={f_confirmPassword}
+                      required
+                      autofocus
+                      placeholder={$t("login.confirmPasswordPlaceholder", {
+                        default: "Enter Password again",
+                      })}
+                    />
+                  {:else}
+                    <input
+                      type="password"
+                      class="w-full pl-10 pr-10 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-themegreen focus:border-transparent placeholder-gray-400"
+                      bind:value={f_confirmPassword}
+                      required
+                      autofocus
+                      placeholder={$t("login.confirmPasswordPlaceholder", {
+                        default: "Enter Password again",
+                      })}
+                    />
+                  {/if}
+
+                  <!-- 右侧显示/隐藏密码图标 -->
+
+                  <button
+                    on:click={() => {
+                      showPassword = !showPassword;
+                    }}
+                    type="button"
+                    class="absolute inset-y-0 right-0 flex items-center px-3 cursor-pointer hover:bg-gray-200 rounded"
+                    aria-label="Toggle password visibility"
+                  >
+                    {#if showPassword}
+                      <img
+                        src={eyeOpenIcon}
+                        alt="uupgt password show icon"
+                        class="w-4 h-4 text-gray-400"
+                      />
+                    {:else}
+                      <img
+                        src={eyeCloseIcon}
+                        alt="uupgt password hide icon"
+                        class="w-4 h-4 text-gray-400 opacity-20"
+                      />
+                    {/if}
+                  </button>
+                </div>
+                <div class="w-full h-6"></div>
+                <button
+                  disabled={isWaitting}
+                  on:click={forgetPasswordSubmit}
+                  type="submit"
+                  class="w-full bg-themegreen py-3 rounded-md hover:bg-themegreenhover focus:outline-none focus:ring-2 focus:ring-themegreen disabled:opacity-50 flex items-center justify-center"
+                >
+                  <span class="text-white font-semibold"
+                    >{$t("login.confirmAndLogin", {
+                      default: "Enter Password again",
+                    })}</span
+                  >
+                  <!-- 加载过程禁用按钮并显示loading动画 -->
+
+                  {#if isWaitting}<span class="message-loader w-6 h-6 ml-3"
+                    ></span>{/if}
+                </button>
+              </form>
+            </div>
+          </div>
+        {/if}
+        <!-- 设置新密码 -->
+        {#if $loginPageName === status_resetPassword}
+          <div class="animate-fade">
+            <!-- 登录框左上角标题栏 -->
+            <div class="flex items-center mb-6">
+              <button
+                on:click={back}
+                class="mr-2 text-gray-700 text-xl cursor-pointer transition-colors duration-300 hover:bg-gray-200 focus:outline-none rounded"
+              >
+                <img src={backIcon} alt={$t("login.back")} class="w-8 h-8" />
+              </button>
+              <span class="text-lg font-semibold">
+                {#if forgotPassword}
+                  {$t("login.resetPasswordTitle")}
+                {:else}
+                  {$t("login.setPasswordTitle")}
+                {/if}
+              </span>
+            </div>
+
+            <div class="mt-10">
+              <form>
+                <p class="mb-4">
+                  {#if forgotPassword}
+                    {$t("login.resetPasswordText")}
+                  {:else}
+                    {$t("login.setPasswordText")}
+                  {/if}
+                </p>
+                <div class="relative w-full mb-4">
+                  <!-- 左侧密码图标 -->
+                  <span
+                    class="absolute inset-y-0 left-0 flex items-center pl-3"
+                  >
+                    <img
+                      src={passwordIcon}
+                      alt="uupgt password icon"
+                      class="w-4 h-4 text-gray-400 opacity-20"
+                    />
+                  </span>
+                  <!-- 密码输入框 -->
+                  {#if showPassword}
+                    <input
+                      type="text"
+                      class="w-full pl-10 pr-10 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-themegreen focus:border-transparent placeholder-gray-400"
+                      bind:value={password}
+                      required
+                      autofocus
+                      placeholder={forgotPassword
+                        ? $t("login.resetPasswordPlaceholder")
+                        : $t("login.setPasswordPlaceholder")}
+                    />
+                  {:else}
+                    <input
+                      type="password"
+                      class="w-full pl-10 pr-10 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-themegreen focus:border-transparent placeholder-gray-400"
+                      bind:value={password}
+                      required
+                      autofocus
+                      placeholder={forgotPassword
+                        ? $t("login.resetPasswordPlaceholder")
+                        : $t("login.setPasswordPlaceholder")}
+                    />
+                  {/if}
+
+                  <!-- 右侧显示/隐藏密码图标 -->
+
+                  <button
+                    on:click={() => {
+                      showPassword = !showPassword;
+                    }}
+                    type="button"
+                    class="absolute inset-y-0 right-0 flex items-center px-3 cursor-pointer hover:bg-gray-200 rounded"
+                    aria-label="Toggle password visibility"
+                  >
+                    {#if showPassword}
+                      <img
+                        src={eyeOpenIcon}
+                        alt="uupgt password show icon"
+                        class="w-4 h-4 text-gray-400"
+                      />
+                    {:else}
+                      <img
+                        src={eyeCloseIcon}
+                        alt="uupgt password hide icon"
+                        class="w-4 h-4 text-gray-400 opacity-20"
+                      />
+                    {/if}
+                  </button>
+                </div>
+                <div class="relative w-full mb-4">
+                  <!-- 左侧密码图标 -->
+                  <span
+                    class="absolute inset-y-0 left-0 flex items-center pl-3"
+                  >
+                    <img
+                      src={passwordIcon}
+                      alt="uupgt password icon"
+                      class="w-4 h-4 text-gray-400 opacity-20"
+                    />
+                  </span>
+                  <!-- 密码输入框 -->
+                  {#if showPassword}
+                    <input
+                      type="text"
+                      class="w-full pl-10 pr-10 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-themegreen focus:border-transparent placeholder-gray-400"
+                      bind:value={confirmPassword}
+                      required
+                      autofocus
+                      placeholder={$t("login.confirmPasswordPlaceholder")}
+                    />
+                  {:else}
+                    <input
+                      type="password"
+                      class="w-full pl-10 pr-10 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-themegreen focus:border-transparent placeholder-gray-400"
+                      bind:value={confirmPassword}
+                      required
+                      autofocus
+                      placeholder={$t("login.confirmPasswordPlaceholder")}
+                    />
+                  {/if}
+
+                  <!-- 右侧显示/隐藏密码图标 -->
+
+                  <button
+                    on:click={() => {
+                      showPassword = !showPassword;
+                    }}
+                    type="button"
+                    class="absolute inset-y-0 right-0 flex items-center px-3 cursor-pointer hover:bg-gray-200 rounded"
+                    aria-label="Toggle password visibility"
+                  >
+                    {#if showPassword}
+                      <img
+                        src={eyeOpenIcon}
+                        alt="uupgt password show icon"
+                        class="w-4 h-4 text-gray-400"
+                      />
+                    {:else}
+                      <img
+                        src={eyeCloseIcon}
+                        alt="uupgt password hide icon"
+                        class="w-4 h-4 text-gray-400 opacity-20"
+                      />
+                    {/if}
+                  </button>
+                </div>
+                <div class="h-8"></div>
+                <button
+                  disabled={isWaitting}
+                  on:click={handleSetPassword}
+                  type="submit"
+                  class="w-full bg-themegreen py-3 rounded-md hover:bg-themegreenhover focus:outline-none focus:ring-2 focus:ring-themegreen disabled:opacity-50 flex items-center justify-center"
+                >
+                  <span class="text-white font-semibold"
+                    >{$t("login.confirmAndLogin")}</span
+                  >
+                  <!-- 加载过程禁用按钮并显示loading动画 -->
+
+                  {#if isWaitting}<span class="message-loader w-6 h-6 ml-3"
+                    ></span>{/if}
+                </button>
+              </form>
+            </div>
+          </div>
+        {/if}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @import "../styles/skeleton.css";
+  .login-viewbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    background-color: rgba(0, 0, 0, 0.6);
+    height: 100vh;
+    width: 100vw;
+  }
+</style>

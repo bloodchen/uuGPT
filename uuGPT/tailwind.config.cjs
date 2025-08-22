@@ -19,10 +19,14 @@ module.exports = {
         themegrey:"#505860",
         themegreylight:"#ABABAB",
         themegreyhover:"#EBEDED",
+        themegreyhover2:"#dddee1",
         themegreyborder:"#EBEDED"
 
       },
-            opacity: {
+      maxHeight: {
+        'shareModel': 'calc(100vh - clamp(24px, 10vh, 72px) * 2)',
+      },
+      opacity: {
         'hover': '.2',
       }
     }

@@ -1,591 +1,542 @@
 <script lang="ts">
-  import { init, getLocaleFromNavigator, register, locale } from "svelte-i18n";
-  import type { CustomMessage } from "../stores/stores";
-  import { get } from "svelte/store";
-  import { onMount, onDestroy } from "svelte";
-  import { initApp, cleanupApp } from "../appInit";
-  import Topbar from "../lib/Topbar.svelte";
-  import Settings from "../lib/Settings.svelte";
-  import SvelteMarkdown from "svelte-markdown";
-  import CodeRenderer from "../renderers/Code.svelte";
-  import UserCodeRenderer from "../renderers/userCode.svelte";
-  import EmRenderer from "../renderers/Em.svelte";
-  import ListRenderer from "../renderers/ListRenderer.svelte";
-  import ListItemRenderer from "../renderers/ListItem.svelte";
-  import CodeSpanRenderer from "../renderers/CodeSpan.svelte";
-  import ParagraphRenderer from "../renderers/Paragraph.svelte";
-  import hljs from "highlight.js";
-  import { marked } from "marked";
-  import "highlight.js/styles/dark.css";
-  import "../i18n.js";
-  import { t } from "svelte-i18n";
-  import HtmlRenderer from "../renderers/Html.svelte";
-  import DeleteIcon from "../assets/delete.svg";
-  import CopyIcon from "../assets/copy.svg";
-  import RetryIcon from "../assets/retry.svg";
-  import UserIcon from "../assets/UserIcon.svg";
-  import RobotIcon from "../assets/aianswer-avtar.svg";
-  import MoreIcon from "../assets/moreactions.svg";
-  import EditIcon from "../assets/edit.svg";
-  import SendIcon from "../assets/sendmessage-active.svg";
-  import SendDisabledIcon from "../assets/sendmessage-default.svg";
-  import WaitIcon from "../assets/stop.svg";
-  import GPTIcon from "../assets/gpt.svg";
-  import LikeIcon from "../assets/helpful.svg";
-  import DislikeIcon from "../assets/unhelpful.svg";
-  import LikeActiveIcon from "../assets/helpful-checked.svg";
-  import DislikeActiveIcon from "../assets/unhelpful-checked.svg";
-  import { afterUpdate } from "svelte";
+  import { t } from "svelte-i18n"; // 一定要记得 import，并在模板中使用 {$t('home.xxx')}
+  import { onMount } from "svelte";
+  import "../app.css";
+  import { getCookieValue } from "../utils/generalUtils";
   import {
-    settingsVisible,
-    messages,
-    sendKey,
-    lineBreakKey,
-  } from "../stores/stores";
-  import {
-    isAudioMessage,
-    formatMessageForMarkdown,
-  } from "../utils/generalUtils";
-
-  import { copyTextToClipboard } from "../utils/generalUtils";
-  import { isStreaming } from "../stores/stores";
-  import { closeStream } from "../services/uuAIServices";
-  import {
-    clearChat,
-    deleteMessage,
-    sendRegularMessage,
-    sendRetryMessage,
-  } from "../manages/messageManages";
-  import { parse } from "svelte/compiler";
-  // 自定义 renderers
-  const renderers = {
-    code: CodeRenderer,
-    em: EmRenderer,
-    list: ListRenderer,
-    listitem: ListItemRenderer,
-    paragraph: ParagraphRenderer,
-    html: HtmlRenderer,
-  };
-
-  const userRenderers = {
-    code: UserCodeRenderer,
-    codespan: CodeSpanRenderer,
-    em: EmRenderer,
-    list: ListRenderer,
-    listitem: ListItemRenderer,
-    paragraph: ParagraphRenderer,
-    html: HtmlRenderer,
-    // 其他自定义的 renderer
-  };
-
-  marked.setOptions({
-    highlight: function (code, lang) {
-      if (hljs.getLanguage(lang)) {
-        return hljs.highlight(lang, code).value;
-      }
-      return hljs.highlightAuto(code).value;
-    },
-    langPrefix: "hljs language-", // 为高亮添加类前缀，确保样式生效
-  });
-
-  let urlParameter;
-  let input: string = "";
-  let textAreaElement: any;
-  let editTextArea: any;
-
-  let pdfOutput = "";
-
-  let chatContainer: HTMLElement;
-  let moreButtonsToggle: boolean = false;
-  let conversationTitle = "";
-
-  let editingMessageId: number | null = null;
-  let editingMessageContent: string = "";
-
-  let chatContainerObserver: MutationObserver | null = null;
-  let isMobile = false;
-  function setupMutationObserver() {
-    if (!chatContainer) return; // Ensure chatContainer is mounted
-
-    const config = { childList: true, subtree: true, characterData: true };
-
-    chatContainerObserver = new MutationObserver((mutationsList, observer) => {
-      // Trigger scroll if any relevant mutations observed
-      scrollChatToEnd();
-    });
-
-    chatContainerObserver.observe(chatContainer, config);
-  }
-
+    getUserInfo,
+    userLoginForMaxthon,
+  } from "../manages/userinfoManages";
+  import {TestbaseURL } from "../stores/globalParamentStores";
+  // 图片导入
+  import uugptIcon from "../assets/uugpt_favion_small.png";
+  import feature1 from "../assets/home/feature-1.svg";
+  import feature2 from "../assets/home/feature-2.svg";
+  import feature3 from "../assets/home/feature-3.svg";
+  import feature4 from "../assets/home/feature-4.svg";
+  import avatar1 from "../assets/home/user1.png";
+  import avatar2 from "../assets/home/user2.png";
+  import avatar3 from "../assets/home/user3.png";
+  import gptIcon from "../assets/gpt.svg";
+  import geminiIcon from "../assets/gemini.svg";
+  import claudeIcon from "../assets/claude.svg";
+  import {isLogin} from '../stores/globalParamentStores'
+  import userAvatar from '../assets/login/avatar-default.svg'
   onMount(async () => {
-    await initApp();
-    isMobile =
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent,
-      );
-    // Setup MutationObserver after app initialization and component mounting
-    setupMutationObserver();
-
+    // userID.set("1733973830");
     const urlParams = new URLSearchParams(window.location.search);
-    urlParameter = urlParams.get("aisearch_q");
-    if (urlParameter) {
-      input = urlParameter;
-      processMessage();
+    let urlParameter = urlParams.get("mxcallback");
+
+    if (getCookieValue("MXTOKEN") != null || urlParameter!=null) {
+      await userLoginForMaxthon();
     }
-
-    document.addEventListener("DOMContentLoaded", function () {
-      // 选择所有的 h1-h6 标签
-      const headings = document.querySelectorAll(
-        ".message-display h1, .message-display h2, .message-display h3, .message-display h4, .message-display h5, .message-display h6",
-      );
-
-      // 遍历每个 heading 元素，设置 data-text 属性并添加4个字符
-      headings.forEach((heading) => {
-        const originalText = heading.textContent;
-        const extendedText = originalText + "..."; // 在文本后添加4个空格
-        heading.setAttribute("data-text", extendedText);
-      });
-    });
-    //初始化store中需要保存在localStorage里的值
-    let sendk = localStorage.getItem("sendkey") || "Enter";
-    let linebreakk = localStorage.getItem("linebreakkey") || "Shift+Enter";
-    let storedMessages = localStorage.getItem("search_messages");
-    let parsedMessages: CustomMessage[] =
-      storedMessages !== null ? JSON.parse(storedMessages) : [];
-    sendKey.set(sendk);
-    sendKey.subscribe((value) => {
-      localStorage.setItem("sendkey", value);
-    });
-    lineBreakKey.set(linebreakk);
-    lineBreakKey.subscribe((value) => {
-      localStorage.setItem("linebreakkey", value);
-    });
-    messages.set(parsedMessages);
-    messages.subscribe((value) => {
-      localStorage.setItem("search_messages", JSON.stringify(value));
-    });
-
-    //语言初始化
-    // 提前设置初始语言
-    const initialLocale =
-      localStorage.getItem("locale") || getLocaleFromNavigator() || "en";
-
-    // 初始化配置
-    // init({
-    //   fallbackLocale: "en",
-    //   initialLocale,
-    // });
-
-    // 设置初始语言
-    locale.set(initialLocale);
-    locale.subscribe((newLocale) => {
-      localStorage.setItem("locale", newLocale);
-    });
+    let res =  getUserInfo();
+    res.then((res)=>{
+      
+    })
   });
 
-  onDestroy(() => {
-    // Clean up MutationObserver when component is destroyed to prevent memory leaks
-    if (chatContainerObserver) {
-      chatContainerObserver.disconnect();
-      chatContainerObserver = null;
-    }
-    // Clean up app-specific resources
-    cleanupApp();
-  });
-
-  function scrollChatToEnd() {
-    if (chatContainer) {
-      const threshold = 150; // How close to the bottom (in pixels) to trigger auto-scroll
-      const isNearBottom =
-        chatContainer.scrollHeight - chatContainer.scrollTop - threshold <=
-        chatContainer.clientHeight;
-
-      if (isNearBottom) {
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-      }
-    }
-  }
-  const keys = {
-    Enter: "001",
-    "Shift+Enter": "011",
-    "Ctrl+Enter": "101",
-  };
-  function textAreaKeysListener(event: any) {
-    let sendCode = parseInt(keys[get(sendKey)], 2);
-    let linebreakCode = parseInt(keys[get(lineBreakKey)], 2);
-    let e = parseInt(event.key === "Enter" ? "001" : "000", 2);
-    let se = parseInt(event.shiftKey ? "010" : "000", 2);
-    let ce = parseInt(event.ctrlKey ? "100" : "000", 2);
-    let kd = ce | se | e;
-    if ( (!(sendCode ^ kd)) && (!isMobile)) {
-      event.preventDefault();
-      processMessage();
-    }
-
-    if ( (!(linebreakCode ^ kd)) || (event.key === "Enter" && isMobile)) {
-      event.preventDefault();
-      const textarea = this;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-
-      textarea.value =
-        textarea.value.substring(0, start) +
-        "\n" +
-        textarea.value.substring(end);
-
-      textarea.selectionStart = textarea.selectionEnd = start + 1;
-    }
-  }
-
-  const textMaxHeight = 300; // Maximum height in pixels
-
-  function autoExpand(event: any) {
-    event.target.style.height = "inherit"; // 重置高度
-    const computed = window.getComputedStyle(event.target);
-    const height =
-      parseInt(computed.getPropertyValue("border-top-width"), 10) +
-      event.target.scrollHeight +
-      parseInt(computed.getPropertyValue("border-bottom-width"), 10);
-
-    const newHeight = Math.min(height, textMaxHeight);
-    event.target.style.height = `${newHeight}px`; // 设置计算后的高度
-
-    // 手动调整滚动位置，确保新内容可见
-    if (newHeight >= textMaxHeight) {
-      event.target.scrollTop = event.target.scrollHeight;
-    }
-  }
-
-  function handleInput(event: any) {
-    autoExpand(event); // 扩展 textarea 的高度
-  }
-
-  function processMessage() {
-    sendRegularMessage(input);
-    input = "";
-    textAreaElement.style.height = "6rem"; // Reset the height after sending
-  }
-  function scrollChat() {
-    if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
-  }
-
-  let lastMessageCount = 0;
-  afterUpdate(() => {
-    const currentMessageCount = $messages.length || 0;
-    if (currentMessageCount > lastMessageCount) {
-      scrollChat();
-    }
-    lastMessageCount = currentMessageCount; // Update the count after every update
-  });
-
-  function startEditMessage(i: number) {
-    editingMessageId = i;
-    editingMessageContent = get(messages)[i].content;
-  }
-
-  function retry(i: number) {
-    sendRetryMessage(get(messages)[i - 1].content, i);
-  }
-
-  function cancelEdit() {
-    editingMessageId = null;
-    editingMessageContent = "";
-    editTextArea.style.height = "96px"; // Reset the height when editing is canceled
-  }
-
-  function submitEdit(i: number) {
-    const editedContent = editingMessageContent; // Temporarily store the edited content
-    sendRetryMessage(editedContent, i + 1);
-    cancelEdit();
-    // // Calculate how many messages need to be deleted
-    // const deleteCount =
-    //   $conversations[$chosenConversationId].history.length - i;
-    // // Delete messages from the end to the current one, including itself
-    // for (let j = 0; j < deleteCount; j++) {
-    //   deleteMessageFromConversation(
-    //     $conversations[$chosenConversationId].history.length - 1,
-    //   );
-    // }
-    // // Process the edited message as new input
-    // let convId = $chosenConversationId;
-    // routeMessage(editedContent, convId, pdfOutput);
-    // cancelEdit(); // Reset editing state
-  }
-
-  // 点赞和踩的方法  因为history是openai API里的ChatCompletionRequestMessage类型，
-  //而ChatCompletionRequestMessage类型不包含isLiked和isDisliked这两个属性,所以直接增加属性会报错；
-  //stores里定义customChatCompletionRequestMessage继承ChatCompletionRequestMessage,增加isLiked和isDisliked两个属性
-  function toggleLike(msgid: any) {
-    let msg = $messages[msgid];
-    msg.isLiked = true;
-    msg.isDisliked = false;
-    let conv = get(messages);
-    conv[msgid] = msg;
-    messages.set(conv);
-  }
-
-  function toggleDislike(msgid: any) {
-    let msg = $messages[msgid];
-    msg.isLiked = false;
-    msg.isDisliked = true;
-    let conv = get(messages);
-    conv[msgid] = msg;
-    messages.set(conv);
-  }
-
-  function reloadConfig() {
-    console.log();
-  }
 </script>
 
-<title>
-  {$t("app.title")}
-</title>
-{#if $settingsVisible}
-  <Settings on:settings-changed={reloadConfig} />
-{/if}
+<svelte:head>
+  <title>{$t('app.title')}</title>
+  <meta name="description" content={$t('app.description')} />
+  <meta name="keywords" content={$t('app.keywords')} />
+  <meta property="og:title" content={$t('app.title')} />
+  <meta property="og:description" content={$t('app.description')} />
+  <meta property="og:type" content="website" />
+</svelte:head>
 
-<main class="bg-primary overflow-hidden">
-  <div
-    class="h-screen flex justify-stretch flex-col bg-secondary text-black/80 height-manager"
-  >
-    <Topbar
-      bind:conversation_title={conversationTitle}
-      on:new-chat={clearChat}
-    />
-    <div
-      class="flex bg-primary overflow-y-auto overflow-x-hidden justify-center grow"
-      bind:this={chatContainer}
-    >
-      {#if $messages.length > 0}
-        <div class="flex flex-col pt-2 grow max-w-full px-0 sm:px-5">
-          <div class="w-full">
-            {#each $messages as message, i}
-              {#if message.role !== "system"}
-                <div
-                  class="message relative inline-block bg-primary px-3 mt-3 flex flex-col transition-all duration-200 ease-in-out"
-                >
-                  <div class="profile-picture flex align-middle">
-                    <div>
-                      <img
-                        src={message.role === "user" ? UserIcon : RobotIcon}
-                        alt="Profile"
-                        class="w-[1.5rem] h-[1.5rem]"
-                      />
-                    </div>
-                    <div class="relative ml-2 font-bold">
-                      {#if message.role === "assistant"}
-                        {$t("app.assistantname")}
-                      {:else}
-                        {$t("app.username")}
-                      {/if}
-                    </div>
-                  </div>
+<!-- 整页容器 -->
+<main class="min-h-screen flex flex-col bg-white">
+  <!-- 顶部导航 -->
+  <header class="sticky top-0 z-50 shadow-lg w-full bg-gray-800">
+    <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+      <!-- Logo / 项目名 -->
+      <div class="flex items-center">
+        <a href="/" class="text-2xl font-extrabold text-primary flex items-center">
+          <img class="w-10 h-10 mr-2 inline-block" src={uugptIcon} alt="UUGPT icon"> <span>UUGPT</span>
+        </a>
+      </div>
 
-                  {#if editingMessageId === i}
-                    <textarea
-                      bind:this={editTextArea}
-                      class="message-edit-textarea mt-2 bg-secondary p-2 mx-2 border-2 border-themegreyborder resize-none focus:outline-2 focus:outline-themegreen shadow rounded-lg transition-all duration-200 ease-in-out"
-                      bind:value={editingMessageContent}
-                      on:input={autoExpand}
-                      autofocus
-                      style="height: 6.5rem; overflow-y: auto;"
-                    ></textarea>
-                    <div class="flex place-content-center mt-4">
-                      <button
-                        class="cancel-edit border-2 border-themegreyborder bg-themegreyhover hover:bg-secondary rounded-lg px-3 py-1 mr-2"
-                        on:click={() => cancelEdit()}>{$t("app.cancel")}</button
-                      >
-                      <button
-                        class="submit-edit rounded-lg px-3 py-1 mr-2 text-white bg-themegreen
-                {$isStreaming
-                          ? 'bg-themegreylight text-white cursor-not-allowed'
-                          : 'hover:bg-themegreenhover hover:text-white'}"
-                        on:click={() => submitEdit(i)}
-                        disabled={$isStreaming}>{$t("app.submit")}</button
-                      >
-                    </div>
-                  {:else}
-                    <div
-                      class="message-display mt-2 transition-all duration-200 ease-in-out"
-                    >
-                      {#if message.role === "assistant"}
-                        <SvelteMarkdown
-                          {renderers}
-                          source={formatMessageForMarkdown(
-                            message.content.toString(),
-                          )}
-                        />
-                      {:else}
-                        <SvelteMarkdown
-                          {renderers}
-                          source={formatMessageForMarkdown(
-                            message.content.toString(),
-                          )}
-                        />
-                      {/if}
-                    </div>
-                    <div class="toolbelt flex mb-2 tools justify-between">
-                      <div class="flex space-x-2">
-                        {#if message.role === "assistant"}
-                          <button
-                            class="copyButton btn-custom"
-                            on:click={() =>
-                              copyTextToClipboard(message.content)}
-                          >
-                            <img
-                              class="copy-icon"
-                              alt={$t("app.copy")}
-                              src={CopyIcon}
-                            />
-                            <span class="btn-text">{$t("app.copy")}</span>
-                          </button>
-                          <button
-                            class="copyButton btn-custom"
-                            on:click={() => retry(i)}
-                          >
-                            <img
-                              class=""
-                              alt={$t("app.retry")}
-                              src={RetryIcon}
-                            />
-                            <span class="btn-text">{$t("app.retry")}</span>
-                          </button>
-                          <button
-                            class="deleteButton btn-custom"
-                            on:click={() => deleteMessage(i)}
-                          >
-                            <img
-                              class="delete-icon"
-                              alt={$t("app.delete")}
-                              src={DeleteIcon}
-                            />
-                            <span class="btn-text">{$t("app.delete")}</span>
-                          </button>
-                        {/if}
-                        {#if message.role === "user"}
-                          <button
-                            class="btn-custom"
-                            on:click={() => startEditMessage(i)}
-                          >
-                            <img
-                              class="edit-icon"
-                              alt={$t("app.edit")}
-                              src={EditIcon}
-                            />
-                            <span class="btn-text">{$t("app.edit")}</span>
-                          </button>
-                        {/if}
-                      </div>
-                      <div class="flex space-x-2">
-                        {#if message.role === "assistant"}
-                          <!-- 在内容框后面显示mode todo 不对应 -->
-                          <!-- <span
-                              class="btn-custom hover:bg-secondary cursor-default"
-                              ><img
-                                alt={$selectedMode}
-                                src={GPTIcon}
-                              />{$selectedMode}</span
-                            > -->
+      <!-- 菜单 (桌面端) -->
+      <nav class="hidden md:flex space-x-6 text-secondary">
+        <a href={$TestbaseURL+"/chat"} class="hover:text-primary transition-colors">
+          {$t('home.nav.chat')}
+        </a>
+        <a href={$TestbaseURL+"#features"} class="hover:text-primary transition-colors">
+          {$t('home.nav.features')}
+        </a>
+        <a href={$TestbaseURL+"/pricing"} class="hover:text-primary transition-colors">
+          {$t('home.nav.pricing')}
+        </a>
+        <a href={$TestbaseURL+"#reviews"} class="hover:textprimary transition-colors">
+          {$t('home.nav.reviews')}
+        </a>
+      </nav>
 
-                          <!--点赞和踩 todo 不对应 -->
-                          <button
-                            id="likeBtn"
-                            class="btn-custom"
-                            on:click={() => toggleLike(i)}
-                          >
-                            <img
-                              alt="like"
-                              src={message.isLiked ? LikeActiveIcon : LikeIcon}
-                              class={message.isLiked
-                                ? "small-rotate-animation"
-                                : ""}
-                            />
-                            <span class="btn-text">{$t("app.like")}</span>
-                          </button>
-                          <button
-                            id="dislikeBtn"
-                            class="btn-custom"
-                            on:click={() => toggleDislike(i)}
-                          >
-                            <img
-                              alt="dislike"
-                              src={message.isDisliked
-                                ? DislikeActiveIcon
-                                : DislikeIcon}
-                              class={message.isDisliked
-                                ? "small-rotate-animation"
-                                : ""}
-                            />
-                            <span class="btn-text">{$t("app.dislike")}</span>
-                          </button>
-                        {/if}
-                      </div>
-                    </div>
-                  {/if}
-                </div>
-              {/if}
-            {/each}
-          </div>
-        </div>
+      <!-- 登录 / 注册 / 个人中心 -->
+      {#if $isLogin}
+        <a
+          href="/chat"
+          class="text-sm font-medium text-[var(--secondary,#f9f9f9)] hover:text-[var(--secondary,#f9f9f9)] transition-colors"
+          >
+          <img
+            src={userAvatar}
+            alt="User Avatar"
+            class="w-8 h-8 rounded-full object-cover"/>
+        </a>
       {:else}
-        <div class="flex justify-center items-center h-full">
-          <p>{$t("app.noConversation")}</p>
+        <div class="space-x-4">
+          <a
+            href="/login"
+            class="text-sm text-[var(--secondary,#f9f9f9)] hover:text-[var(--secondary,#f9f9f9)] transition-colors"
+            >{$t('home.nav.login')}</a
+          >
+          <a
+            href="/login"
+            class="text-sm text-[var(--secondary,#f9f9f9)] border border-[var(--secondary,#f9f9f9)] px-4 py-1 rounded hover:bg-themegreen hover:border-transparent hover:text-primary transition-colors"
+            >{$t('home.nav.register')}</a
+          >
         </div>
       {/if}
     </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section
+    class="relative w-full pt-20 pb-20 bg-gradient-to-br from-[#d522e5] via-[#7856f3] to-[#7856f3] text-white overflow-hidden"
+    style="background-size: cover; background-position: center;"
+  >
 
     <div
-      class="inputbox-container w-full flex justify-center items-center bg-primary"
-    >
-      <div
-        class="inputbox flex flex-1 bg-primary mt-auto mx-auto mb-3 relative"
-      >
-        <textarea
-          bind:this={textAreaElement}
-          class="w-full min-h-[6.5rem] h-24 rounded-lg p-2 pb-11 mx-1 border-2 border-themegreyborder resize-none focus:outline-2 focus:outline-themegreen shadow-xl"
-          placeholder={$t("app.textareaPlaceholder")}
-          autofocus
-          bind:value={input}
-          on:input={handleInput}
-          style="height: 6.5rem; overflow-y: auto; overflow:visible !important;"
-          on:keydown={textAreaKeysListener}
-        ></textarea>
-        <div
-          class="absolute textarea-btn-set flex justify-between bg-primary pb-1"
+      class="absolute inset-0 transprant bg-gradient-to-r from-blue-400 to-emerald-400 pointer-events-none opacity-[0.3]"
+    ></div>
+    <div class="relative container mx-auto px-4 text-center z-20">
+      <!-- 大标题 + 副标题 -->
+      <div class="max-w-5xl mx-auto">
+        <h1 class="text-3xl lg:text-5xl font-bold text-white mb-8">
+          {$t('home.hero.title')}
+        </h1>
+        <!-- 这里可以把多行合并为一个翻译，也可以分拆 -->
+        <p class="text-xl md:text-2xl lg:text-[1.5rem] mt-4 block mt-4 line-height-1.5">
+          {$t('home.hero.subtitleLine1')}<br />
+          {$t('home.hero.subtitleLine2')}<br />
+          {$t('home.hero.subtitleLine3')}
+        </p>
+      </div>
+
+      <!-- 安装 / 使用 按钮 + AI Logos -->
+      <div class="flex flex-col items-center gap-8 mb-16 mt-10">
+        <a
+          href={$TestbaseURL+"/chat"}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center bg-white/10 backdrop-blur-md rounded-full p-2 pr-6 hover:bg-white/15 transition-all duration-300 border border-white/20 shadow-lg shadow-black/10"
         >
-          <div class="flex send-btn-set flex-end items-center gap-1">
-            <!-- 发送按钮 -->
-            <button
-              class="file-label bg-primary rounded cursor-pointer hover:themegray transition-colors"
-              on:click={() => {
-                if ($isStreaming) {
-                  closeStream();
-                } else {
-                  processMessage();
-                }
-              }}
-              disabled={!$isStreaming && !input.trim().length}
+          <div class="flex -space-x-2 mr-4">
+            <!-- GPT Logo -->
+            <div
+              class="relative rounded-full transform hover:-translate-y-1 transition-transform duration-200 hover:z-10 shadow-sm"
+              style="z-index: 4; width: 40px; height: 40px; padding: 4px;"
             >
-              {#if $isStreaming}
-                <img src={WaitIcon} alt="wait" class="min-w-[32px] w-[32px]" />
-              {:else if input.trim().length === 0}
-                <img
-                  src={SendDisabledIcon}
-                  alt="send"
-                  class="min-w-[32px] w-[32px]"
-                />
-              {:else}
-                <img src={SendIcon} alt="send" class="min-w-[32px] w-[32px]" />
-              {/if}
-            </button>
+              <img
+                alt="GPT"
+                loading="lazy"
+                width="32"
+                height="32"
+                data-nimg="1"
+                class="w-full h-full object-contain"
+                src={gptIcon}
+                style="color: transparent;"
+              />
+            </div>
+            <!-- Gemini Logo -->
+            <div
+              class="relative rounded-full transform hover:-translate-y-1 transition-transform duration-200 hover:z-10 shadow-sm"
+              style="z-index: 3; width: 40px; height: 40px; padding: 4px;"
+            >
+              <img
+                alt="gemini"
+                loading="lazy"
+                width="32"
+                height="32"
+                data-nimg="1"
+                class="w-full h-full object-contain"
+                src={geminiIcon}
+                style="color: transparent;"
+              />
+            </div>
+            <!-- Claude Logo -->
+            <div
+              class="relative rounded-full transform hover:-translate-y-1 transition-transform duration-200 hover:z-10 shadow-sm"
+              style="z-index: 2; width: 40px; height: 40px; padding: 4px;"
+            >
+              <img
+                alt="claude"
+                loading="lazy"
+                width="32"
+                height="32"
+                data-nimg="1"
+                class="w-full h-full object-contain"
+                src={claudeIcon}
+                style="color: transparent;"
+              />
+            </div>
+          </div>
+          <div class="flex items-center gap-2 text-white font-medium">
+            <span>{$t('home.hero.startChatBtn')}</span>
+            <svg
+              class="w-5 h-5 transform group-hover:translate-x-1 transition-transform duration-200"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M14 5l7 7m0 0l-7 7m7-7H3"
+              ></path>
+            </svg>
+          </div>
+        </a>
+      </div>
+
+      <!-- Hero 里的数字统计区 -->
+      <div class="flex flex-wrap gap-6 text-center">
+        <!-- user count example -->
+        <div class="flex-1 min-w-[120px]">
+          <div class="text-3xl font-bold">2000+</div>
+          <div class="text-sm text-white/60 mt-1">{$t('home.hero.activeUsers')}</div>
+        </div>
+        <!-- language count example -->
+        <div class="flex-1 min-w-[120px]">
+          <div class="text-3xl font-bold">21</div>
+          <div class="text-sm text-white/60 mt-1">{$t('home.hero.supportLangs')}</div>
+        </div>
+        <!-- features count example -->
+        <div class="flex-1 min-w-[120px]">
+          <div class="text-3xl font-bold">US$1</div>
+          <div class="text-sm text-white/60 mt-1">{$t('home.hero.lowestPrice')}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why Choose / Features 区域 -->
+  <section id="features" class="w-full py-16 bg-white">
+    <div class="container mx-auto px-4">
+      <h2
+        class="text-3xl font-bold text-[var(--themegrey,#505860)] text-center mb-10 mt-20"
+      >
+        {$t('home.features.title')}
+      </h2>
+
+      <div class="grid md:grid-cols-3 gap-10 max-w-7xl mx-auto">
+        <!-- Feature Card 1: 多模型 -->
+        <div
+          class="relative group p-8 rounded-2xl bg-white hover:bg-gray-50 transition-all duration-300 hover:shadow-xl"
+        >
+          <div
+            class="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500
+        opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+          ></div>
+          <div class="relative space-y-6">
+            <div class="p-3 rounded-xl bg-gray-50 w-fit">
+              <!-- 这里可以使用 feature1 等图，也可改成 SVG -->
+              <img src={feature1} alt="多模型切换" class="w-12 h-12" />
+            </div>
+            <h3 class="text-xl font-semibold">
+              {$t('home.features.multiModel.title')}
+            </h3>
+            <p class="text-gray-600 text-base leading-relaxed">
+              {$t('home.features.multiModel.desc')}
+            </p>
+          </div>
+        </div>
+
+        <!-- Feature Card 2: 安全 & 隐私 => 更换锁的SVG图标 -->
+        <div
+          class="relative group p-8 rounded-2xl bg-white hover:bg-gray-50 transition-all duration-300 hover:shadow-xl"
+        >
+          <div
+            class="absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500
+        opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+          ></div>
+          <div class="relative space-y-6">
+            <div class="p-3 rounded-xl bg-gray-50 w-fit">
+              <img src={feature2} alt="多模型切换" class="w-12 h-12" />
+            </div>
+            <h3 class="text-xl font-semibold">
+              {$t('home.features.security.title')}
+            </h3>
+            <p class="text-gray-600 text-base leading-relaxed">
+              {$t('home.features.security.desc')}
+            </p>
+          </div>
+        </div>
+
+        <!-- Feature Card 3: 灵活付费 + 首月优惠 -->
+        <div
+          class="relative group p-8 rounded-2xl bg-white hover:bg-gray-50 transition-all duration-300 hover:shadow-xl"
+        >
+          <div
+            class="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500
+        opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+          ></div>
+          <div class="relative space-y-6">
+            <div class="p-3 rounded-xl bg-gray-50 w-fit">
+              <img src={feature3} alt="付费" class="w-12 h-12" />
+            </div>
+            <h3 class="text-xl font-semibold">
+              {$t('home.features.flexiblePricing.title')}
+            </h3>
+            <p class="text-gray-600 text-base leading-relaxed">
+              {$t('home.features.flexiblePricing.desc')}
+            </p>
+          </div>
+        </div>
+
+        <!-- Feature Card 4: 云端存储 -->
+        <div
+          class="relative group p-8 rounded-2xl bg-white hover:bg-gray-50 transition-all duration-300 hover:shadow-xl"
+        >
+          <div
+            class="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500
+        opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+          ></div>
+          <div class="relative space-y-6">
+            <div class="p-3 rounded-xl bg-gray-50 w-fit">
+              <img src={feature4} alt="云端存储" class="w-12 h-12" />
+            </div>
+            <h3 class="text-xl font-semibold">
+              {$t('home.features.cloudStorage.title')}
+            </h3>
+            <p class="text-gray-600 text-base leading-relaxed">
+              {$t('home.features.cloudStorage.desc')}
+            </p>
+          </div>
+        </div>
+
+        <!-- Feature Card 5: 多模态功能 -->
+        <div
+          class="relative group p-8 rounded-2xl bg-white hover:bg-gray-50 transition-all duration-300 hover:shadow-xl"
+        >
+          <div
+            class="absolute inset-0 rounded-2xl bg-gradient-to-r from-rose-500 to-orange-500
+        opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+          ></div>
+          <div class="relative space-y-6">
+            <div class="p-3 rounded-xl bg-gray-50 w-fit">
+              <!-- 可以自己换成对应图标 -->
+              <svg
+                class="w-12 h-12 text-rose-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold">
+              {$t('home.features.multiModal.title')}
+            </h3>
+            <p class="text-gray-600 text-base leading-relaxed">
+              {$t('home.features.multiModal.desc')}
+            </p>
+          </div>
+        </div>
+
+        <!-- Feature Card 6: 智能搜索 -->
+        <div
+          class="relative group p-8 rounded-2xl bg-white hover:bg-gray-50 transition-all duration-300 hover:shadow-xl"
+        >
+          <div
+            class="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500
+        opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+          ></div>
+          <div class="relative space-y-6">
+            <div class="p-3 rounded-xl bg-gray-50 w-fit">
+              <svg
+                class="w-12 h-12 text-amber-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold">
+              {$t('home.features.intelligentSearch.title')}
+            </h3>
+            <p class="text-gray-600 text-base leading-relaxed">
+              {$t('home.features.intelligentSearch.desc')}
+            </p>
           </div>
         </div>
       </div>
     </div>
-  </div>
+  </section>
+
+  <!-- 用户评价区 -->
+  <section id="reviews" class="w-full py-16 bg-gray-100">
+    <div class="container mx-auto px-4">
+      <h2
+        class="text-3xl font-bold text-[var(--themegrey,#505860)] text-center mb-10"
+      >
+        {$t('home.reviews.title')}
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- 评论卡片1 -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+          <div class="flex items-center mb-4">
+            <img
+              src={avatar1}
+              alt="用户头像1"
+              class="w-10 h-10 rounded-full mr-3"
+            />
+            <div>
+              <h4 class="text-[var(--themegrey,#505860)] font-semibold">
+                {$t('home.reviews.reviewer1.name')}
+              </h4>
+              <span class="text-xs text-[var(--themegreylight,#ABABAB)]">
+                {$t('home.reviews.reviewer1.type')}
+              </span>
+            </div>
+          </div>
+          <p class="text-sm text-[var(--themegrey,#505860)] leading-relaxed">
+            {$t('home.reviews.reviewer1.comment')}
+          </p>
+        </div>
+
+        <!-- 评论卡片2 -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+          <div class="flex items-center mb-4">
+            <img
+              src={avatar2}
+              alt="用户头像2"
+              class="w-10 h-10 rounded-full mr-3"
+            />
+            <div>
+              <h4 class="text-[var(--themegrey,#505860)] font-semibold">
+                {$t('home.reviews.reviewer2.name')}
+              </h4>
+              <span class="text-xs text-[var(--themegreylight,#ABABAB)]">
+                {$t('home.reviews.reviewer2.type')}
+              </span>
+            </div>
+          </div>
+          <p class="text-sm text-[var(--themegrey,#505860)] leading-relaxed">
+            {$t('home.reviews.reviewer2.comment')}
+          </p>
+        </div>
+
+        <!-- 评论卡片3 -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+          <div class="flex items-center mb-4">
+            <img
+              src={avatar3}
+              alt="用户头像3"
+              class="w-10 h-10 rounded-full mr-3"
+            />
+            <div>
+              <h4 class="text-[var(--themegrey,#505860)] font-semibold">
+                {$t('home.reviews.reviewer3.name')}
+              </h4>
+              <span class="text-xs text-[var(--themegreylight,#ABABAB)]">
+                {$t('home.reviews.reviewer3.type')}
+              </span>
+            </div>
+          </div>
+          <p class="text-sm text-[var(--themegrey,#505860)] leading-relaxed">
+            {$t('home.reviews.reviewer3.comment')}
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA: 立即体验 -->
+  <section
+    class="w-full py-16 bg-gradient-to-br from-[#d522e5] via-[#124781] to-[#7856f3] text-white overflow-hidden"
+    style="background-size: cover; background-position: center;"
+  >
+    <div class="container mx-auto px-4 text-center">
+      <h2 class="text-2xl md:text-3xl font-bold mb-6">
+        {$t('home.cta.title')}
+      </h2>
+      <p class="text-white/80 max-w-2xl mx-auto mb-8">
+        {$t('home.cta.subtitle')}
+      </p>
+      <a
+        href={$TestbaseURL+"/chat"}
+        class="inline-block px-8 py-3 bg-gray-900 text-white text-lg rounded hover:bg-gray-800 transition-colors shadow-md font-semibold"
+      >
+        {$t('home.cta.buttonText')}
+      </a>
+    </div>
+  </section>
+
+  <!-- 页脚（深色背景） -->
+  <footer class="w-full bg-gray-800 text-white pt-12 pb-6 mt-auto">
+    <div class="container mx-auto px-4 flex flex-col md:flex-row justify-between">
+      <!-- Logo + 版权信息 -->
+      <div>
+        <h3 class="text-xl font-extrabold">
+          <!-- 如需多语言，可改为 {$t('home.footer.logo')} -->
+          <a href="/" class="text-2xl font-extrabold text-primary flex items-center">
+            <img class="w-10 h-10 mr-2 inline-block" src={uugptIcon} alt="UUGPT icon"> <span>UUGPT</span>
+          </a>
+        </h3>
+        <p class="text-sm text-white/70 mt-2">
+          {$t('home.footer.copyright')}
+        </p>
+      </div>
+
+      <!-- 其它链接 -->
+      <div class="flex flex-col md:flex-row gap-2 md:gap-6 mt-6 md:mt-0">
+        <a
+          href="/changelog"
+          class="text-sm text-white/70 hover:text-white transition-colors"
+        >
+          {$t('home.footer.changelog')}
+        </a>
+        <!-- <a
+          href="/faq"
+          class="text-sm text-white/70 hover:text-white transition-colors"
+        >
+          {$t('home.footer.faq')}
+        </a> -->
+        <a
+          href="/terms"
+          class="text-sm text-white/70 hover:text-white transition-colors"
+        >
+          {$t('home.footer.terms')}
+        </a>
+        <a
+          href="/privacy"
+          class="text-sm text-white/70 hover:text-white transition-colors"
+        >
+          {$t('home.footer.privacy')}
+        </a>
+      </div>
+    </div>
+
+    <div class="text-gray-800 text-xs mt-4 px-4">
+      {$t('home.footer.seoText')}
+    </div>
+  </footer>
 </main>
 
-<style>
-  @import "../styles/styles.css";
-</style>
+
