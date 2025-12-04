@@ -21,7 +21,8 @@ const AI_MODEL_CONFIG = {
       'o1': 'o1',
       'o1-mini': 'o1-mini',
       'o3-mini': 'o3-mini',
-      'o3': 'o3'
+      'o3': 'o3',
+      
     }
   },
   anthropic: {
