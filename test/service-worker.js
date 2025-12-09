@@ -1,4 +1,4 @@
-const CACHE_NAME = 'uugpt-pwa-v1.0.3';
+const CACHE_NAME = 'uugpt-pwa-v1.1.0';
 
 const urlsToCache = [
   '/chat',
