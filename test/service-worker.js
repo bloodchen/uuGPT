@@ -16,9 +16,8 @@ self.addEventListener('install', event => {
   event.waitUntil(
       caches.open(CACHE_NAME)
           .then(cache => {
-              console.log('打开缓存');
-              return cache.addAll(urlsToCache).catch(err => {
-                  console.error('缓存失败:', err);
+              return cache.addAll(urlsToCache).catch(() => {
+                  // Cache failed
               });
           })
   );
