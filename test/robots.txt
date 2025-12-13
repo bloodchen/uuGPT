@@ -1,5 +1,5 @@
 # robots.txt for UUGPT
-# https://www.uugpt.com/robots.txt
+# https://uugpt.com/robots.txt
 
 # 允许所有搜索引擎爬虫
 User-agent: *
@@ -74,5 +74,5 @@ Allow: /changelog
 Crawl-delay: 1
 
 # Sitemap
-Sitemap: https://www.uugpt.com/sitemap.xml
+Sitemap: https://uugpt.com/sitemap.xml
 
