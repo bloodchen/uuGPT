@@ -7,6 +7,7 @@ const e=`# Changelog\r
 **Feature Optimizations**\r
 - 🔄 Optimized chat model switching experience, making available models more prominent and easy to identify\r
 - 💡 Optimized unavailable model switching prompts - when switching to premium models, users will be intelligently prompted to upgrade their plan\r
+- 🔀 Logged-in users will be automatically redirected to the chat page after entering the home page\r
 \r
 **Bug Fixes**\r
 - 🐛 Fixed issue where iOS sidebar chat switching required double-click\r

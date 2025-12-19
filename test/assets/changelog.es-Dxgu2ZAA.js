@@ -7,6 +7,7 @@ const e=`# Registro de Cambios\r
 **Optimizaciones de Funcionalidades**\r
 - 🔄 Optimizada la experiencia de cambio de modelos en el chat, haciendo que los modelos disponibles sean más prominentes y fáciles de identificar\r
 - 💡 Optimizados los avisos de cambio de modelos no disponibles - al cambiar a modelos premium, se mostrará inteligentemente un aviso para actualizar el plan\r
+- 🔀 Los usuarios con sesión iniciada serán redirigidos automáticamente a la página de chat después de entrar a la página principal\r
 \r
 **Corrección de Errores**\r
 - 🐛 Corregido el problema donde el cambio de chat en la barra lateral de iOS requería doble clic\r
