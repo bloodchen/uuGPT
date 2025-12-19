@@ -1,0 +1,1 @@
+import{S as t}from"./SettingsModal-BbcQOBJr.js";import{l as o,o as r}from"./index-D9somsaK.js";import"./IconChevronDown-B-2JxYgY.js";import"./UserAvatar-C6KpHfZQ.js";const n={__name:"Test",setup(e){return(a,s)=>(r(),o(t))}};export{n as default};
