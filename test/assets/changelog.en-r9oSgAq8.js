@@ -1,4 +1,19 @@
 const e=`# Changelog\r
+## 2025.12.19 - V1.1.1 Feature Update\r
+**Core Upgrades**\r
+- ⚙️ Added default model selection - users can customize the default model for new chats in settings\r
+- 🔤 Added font size selection - users can customize the display font size for all pages in settings\r
+\r
+**Feature Optimizations**\r
+- 🔄 Optimized chat model switching experience, making available models more prominent and easy to identify\r
+- 💡 Optimized unavailable model switching prompts - when switching to premium models, users will be intelligently prompted to upgrade their plan\r
+\r
+**Bug Fixes**\r
+- 🐛 Fixed issue where iOS sidebar chat switching required double-click\r
+- 🐛 Fixed issue where input box was too tall after entering long text in new chat\r
+- 🐛 Fixed scrolling anomaly in model switching dropdown list\r
+- 🐛 Fixed issue where user questions might be lost when sharing chats\r
+\r
 ## 2025.12.10 - V1.1.0 Feature Update\r
 **Core Upgrades**\r
 - 🌟 Models are now updated in real-time, allowing faster access to the latest models\r

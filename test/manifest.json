@@ -1,37 +1,37 @@
 {
   "icons": [
     {
-      "src": "https://uugpt.com/uugpt_favicon_16.png?v=1.1.0",
+      "src": "https://uugpt.com/uugpt_favicon_16.png?v=1.1.1",
       "sizes": "16x16",
       "type": "image/png"
     },
     {
-      "src": "https://uugpt.com/uugpt_favicon_32.png?v=1.1.0",
+      "src": "https://uugpt.com/uugpt_favicon_32.png?v=1.1.1",
       "sizes": "32x32",
       "type": "image/png"
     },
     {
-      "src": "https://uugpt.com/uugpt_favicon_48.png?v=1.1.0",
+      "src": "https://uugpt.com/uugpt_favicon_48.png?v=1.1.1",
       "sizes": "48x48",
       "type": "image/png"
     },
     {
-      "src": "https://uugpt.com/uugpt_favicon_64.png?v=1.1.0",
+      "src": "https://uugpt.com/uugpt_favicon_64.png?v=1.1.1",
       "sizes": "64x64",
       "type": "image/png"
     },
     {
-      "src": "https://uugpt.com/uugpt_favicon_128.png?v=1.1.0",
+      "src": "https://uugpt.com/uugpt_favicon_128.png?v=1.1.1",
       "sizes": "128x128",
       "type": "image/png"
     },
     {
-      "src": "https://uugpt.com/uugpt_favicon_192.png?v=1.1.0",
+      "src": "https://uugpt.com/uugpt_favicon_192.png?v=1.1.1",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://uugpt.com/uugpt_favicon_512.png?v=1.1.0",
+      "src": "https://uugpt.com/uugpt_favicon_512.png?v=1.1.1",
       "sizes": "512x512",
       "type": "image/png"
     }
@@ -60,7 +60,7 @@
   "background_color": "#ffffff",
   "theme_color": "#e5e7eb",
   "form_factor": "wide",
-  "version": "v1.1.0",
+  "version": "v1.1.1",
   "display_override": [
     "window-controls-overlay"
   ],

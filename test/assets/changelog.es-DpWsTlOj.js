@@ -1,4 +1,19 @@
-const a=`# Registro de Cambios\r
+const e=`# Registro de Cambios\r
+## 2025.12.19 - Actualización V1.1.1 (Nuevas Funcionalidades)\r
+**Mejoras Principales**\r
+- ⚙️ Añadida función de selección de modelo predeterminado - los usuarios pueden personalizar el modelo predeterminado para nuevos chats en la configuración\r
+- 🔤 Añadida función de selección de tamaño de fuente - los usuarios pueden personalizar el tamaño de fuente de visualización para todas las páginas en la configuración\r
+\r
+**Optimizaciones de Funcionalidades**\r
+- 🔄 Optimizada la experiencia de cambio de modelos en el chat, haciendo que los modelos disponibles sean más prominentes y fáciles de identificar\r
+- 💡 Optimizados los avisos de cambio de modelos no disponibles - al cambiar a modelos premium, se mostrará inteligentemente un aviso para actualizar el plan\r
+\r
+**Corrección de Errores**\r
+- 🐛 Corregido el problema donde el cambio de chat en la barra lateral de iOS requería doble clic\r
+- 🐛 Corregido el problema donde el cuadro de entrada era demasiado alto después de ingresar texto largo en un nuevo chat\r
+- 🐛 Corregida la anomalía de desplazamiento en la lista desplegable de cambio de modelos\r
+- 🐛 Corregido el problema donde las preguntas del usuario podrían perderse al compartir chats\r
+\r
 ## 2025.12.10 - Actualización V1.1.0 (Nuevas Funcionalidades)\r
 **Mejoras Principales**\r
 - 🌟 Los modelos ahora se actualizan en tiempo real, permitiendo un acceso más rápido a los últimos modelos\r
@@ -48,4 +63,4 @@ const a=`# Registro de Cambios\r
 - 📱 Adaptación responsive para móviles\r
 - ⚡ Soporte para respuestas en flujo continuo (streaming)\r
 - 🌍 Interfaz en 21 idiomas\r
-`;export{a as default};
+`;export{e as default};
