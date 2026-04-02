@@ -1,4 +1,11 @@
 const e=`# Changelog\r
+## 2026.03.27 - V1.2.0 Feature Update\r
+**Core upgrades**\r
+- Added support for Maxthon Media Plus and Maxthon Pro memberships\r
+\r
+**Other**\r
+- Fixed plan detection on the pricing page.\r
+\r
 ## 2025.12.19 - V1.1.1 Feature Update\r
 **Core Upgrades**\r
 - ⚙️ Added default model selection - users can customize the default model for new chats in settings\r

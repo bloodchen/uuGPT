@@ -1,4 +1,11 @@
 const e=`# Registro de Cambios\r
+## 2026.03.27 - Actualización V1.2.0\r
+**Mejoras principales**\r
+- Soporte para membresías Maxthon Media Plus y Maxthon Pro\r
+\r
+**Otros**\r
+- Corrección de la detección del plan en la página de precios.\r
+\r
 ## 2025.12.19 - Actualización V1.1.1 (Nuevas Funcionalidades)\r
 **Mejoras Principales**\r
 - ⚙️ Añadida función de selección de modelo predeterminado - los usuarios pueden personalizar el modelo predeterminado para nuevos chats en la configuración\r
