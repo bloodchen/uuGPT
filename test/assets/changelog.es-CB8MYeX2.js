@@ -1,9 +1,10 @@
-const a=`# Registro de Cambios\r
+const e=`# Registro de Cambios\r
 ## 2026.03.27 - Actualización V1.2.0\r
 **Mejoras principales**\r
-- Soporte para \`plan.mxPlan\` en \`/user/info\` (Maxthon Media Plus / Maxthon Pro); valores ausentes se normalizan correctamente\r
-- UI de ajustes y precios con etiquetas y distintivos Maxthon; flujo de cancelación/upgrade adaptado para usuarios con mapeo Maxthon; enlace al centro VIP de Maxthon (zh/en según idioma)\r
-- El menú lateral muestra «Mejorar plan» hacia la página de precios; documentación y FAQ actualizadas\r
+- Soporte para membresías Maxthon Media Plus y Maxthon Pro\r
+\r
+**Otros**\r
+- Corrección de la detección del plan en la página de precios.\r
 \r
 ## 2025.12.19 - Actualización V1.1.1 (Nuevas Funcionalidades)\r
 **Mejoras Principales**\r
@@ -70,4 +71,4 @@ const a=`# Registro de Cambios\r
 - 📱 Adaptación responsive para móviles\r
 - ⚡ Soporte para respuestas en flujo continuo (streaming)\r
 - 🌍 Interfaz en 21 idiomas\r
-`;export{a as default};
+`;export{e as default};
