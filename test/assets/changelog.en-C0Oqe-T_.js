@@ -1,4 +1,15 @@
 const e=`# Changelog\r
+## 2026.03.27 - V1.2.0 Feature Update\r
+**Core Upgrades**\r
+- Integrated optional \`plan.mxPlan\` from \`GET /user/info\` (\`mplus\` = Maxthon Media Plus, \`mpro\` = Maxthon Pro); missing values are normalized so stale client state is not kept\r
+- Settings and pricing show Maxthon plan labels and badges; when tiers match, Maxthon branding is preferred; when UUGPT tier is higher, only UUGPT is shown\r
+- For Maxthon-mapped users: upgrade modal hides unreliable local proration preview; success page omits converted-days lines; “Cancel plan” on pricing opens guidance to manage subscription in Maxthon with a link to the VIP page (\`/zh/vip\` for Chinese locales, \`/en/vip\` otherwise)\r
+- Settings plan row for Maxthon-mapped users opens the Maxthon VIP page; sidebar menu label is now “Upgrade plan” and opens pricing\r
+\r
+**Other**\r
+- Brighter Maxthon badges on pricing in light theme; dark theme unchanged\r
+- API docs and FAQ updated for \`mxPlan\`, callback query params, and independence of Maxthon bundles vs UUGPT billing\r
+\r
 ## 2025.12.19 - V1.1.1 Feature Update\r
 **Core Upgrades**\r
 - ⚙️ Added default model selection - users can customize the default model for new chats in settings\r
